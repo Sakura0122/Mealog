@@ -7,10 +7,15 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    AppBottomNav: typeof import('./components/AppBottomNav.vue')['default']
+    AppTopBar: typeof import('./components/AppTopBar.vue')['default']
     GlobalDialog: typeof import('./components/GlobalDialog.vue')['default']
     GlobalToast: typeof import('./components/GlobalToast.vue')['default']
+    RecipeDetailContent: typeof import('./components/RecipeDetailContent.vue')['default']
     WdConfigProvider: typeof import('@wot-ui/ui/components/wd-config-provider/wd-config-provider.vue')['default']
     WdDialog: typeof import('@wot-ui/ui/components/wd-dialog/wd-dialog.vue')['default']
+    WdIcon: typeof import('@wot-ui/ui/components/wd-icon/wd-icon.vue')['default']
+    WdPopup: typeof import('@wot-ui/ui/components/wd-popup/wd-popup.vue')['default']
     WdToast: typeof import('@wot-ui/ui/components/wd-toast/wd-toast.vue')['default']
   }
 }

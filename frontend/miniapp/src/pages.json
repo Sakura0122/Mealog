@@ -19,7 +19,63 @@
       "type": "home",
       "name": "home",
       "style": {
-        "navigationBarTitleText": "应用"
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/profile/index",
+      "type": "page",
+      "name": "profile",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/recipe-create/index",
+      "type": "page",
+      "name": "recipe-create",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/recipe-detail/index",
+      "type": "page",
+      "name": "recipe-detail",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/recipe-share/index",
+      "type": "page",
+      "name": "recipe-share",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/recipes/index",
+      "type": "page",
+      "name": "recipes",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/record-detail/index",
+      "type": "page",
+      "name": "record-detail",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/record-edit/index",
+      "type": "page",
+      "name": "record-edit",
+      "style": {
+        "navigationStyle": "custom"
       }
     }
   ],
