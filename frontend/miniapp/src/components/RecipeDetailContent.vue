@@ -21,7 +21,7 @@ const handleAction = () => {
     <AppTopBar :show-back="!shared" close />
 
     <view class="mx-auto mt-3 w-[280px] rotate-1 bg-white p-3 pb-8 shadow-[0_5px_12px_rgba(0,0,0,0.12)]">
-      <image src="/static/images/recipe-salmon.jpg" mode="aspectFill" class="h-[256px] w-full" />
+      <image src="/static/images/recipe-soup.jpg" mode="aspectFill" class="h-[256px] w-full" />
       <text class="mx-auto mt-4 block w-max bg-[#dbe4d5] px-4 py-1 text-[10px] text-[#475244] shadow-sm">
         菜谱时刻
       </text>
