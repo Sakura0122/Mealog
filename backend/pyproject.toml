@@ -1,0 +1,30 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "asyncmy>=0.2.11",
+    "boto3>=1.43.53",
+    "fastapi>=0.139.2",
+    "httpx>=0.28.1",
+    "loguru>=0.7.3",
+    "pwdlib[argon2]>=0.3.0",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.2",
+    "pyjwt>=2.13.0",
+    "python-multipart>=0.0.32",
+    "sqlalchemy[asyncio]>=2.0.51",
+    "uvicorn>=0.51.0",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.6.0",
+    "ruff>=0.15.22",
+    "ty>=0.0.61",
+]
+
+[tool.ruff]
+line-length = 100
