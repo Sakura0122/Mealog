@@ -17,19 +17,22 @@ class BaseTable(DeclarativeBase):
 
     __abstract__ = True
 
-    id: Mapped[str] = mapped_column(CHAR(36), primary_key=True, default=lambda: str(uuid7()))
+    id: Mapped[str] = mapped_column(
+        CHAR(36), primary_key=True, default=lambda: str(uuid7()), comment="业务表主键 UUID"
+    )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False),
-        nullable=False,
-        server_default=func.now(),
+        DateTime(timezone=False), nullable=False, server_default=func.now(), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         nullable=False,
         server_default=func.now(),
         server_onupdate=FetchedValue(),
+        comment="最后更新时间",
     )
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=False), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=False), nullable=True, comment="软删除时间，为空表示未删除"
+    )
 
     def soft_delete(self) -> None:
         self.deleted_at = datetime.now(UTC).replace(tzinfo=None)
