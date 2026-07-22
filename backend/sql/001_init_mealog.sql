@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS `users`
     `wechat_openid`  VARCHAR(64)   NOT NULL COMMENT '微信小程序用户 OpenID',
     `wechat_unionid` VARCHAR(64)   NULL COMMENT '微信开放平台 UnionID，未绑定开放平台时为空',
     `nickname`       VARCHAR(64)   NULL COMMENT '用户昵称',
-    `avatar_url`     VARCHAR(1024) NULL COMMENT '用户头像地址',
+    `avatar_object_key` VARCHAR(512) NULL COMMENT '用户头像在对象存储中的文件键',
     `timezone`       VARCHAR(64)   NOT NULL DEFAULT 'Asia/Shanghai' COMMENT '用户时区，用于饮食日历按本地日期展示',
     `created_at`     DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
     `updated_at`     DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
