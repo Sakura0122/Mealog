@@ -1,5 +1,5 @@
 -- Mealog 数据库：保存用户、饮食记录、店铺、个人菜谱及菜谱分享状态，适用于 MySQL 8.0.16 及以上版本。
--- 设计说明：数据库不设置外键和业务约束；关联完整性、枚举值、业务唯一性、级联删除及图片规则由应用层事务维护。
+-- 设计说明：数据库仅约束用户身份唯一性；其余关联完整性、枚举值、业务唯一性、级联删除及图片规则由应用层事务维护。
 -- 软删除说明：业务删除时写入 deleted_at，默认查询仅返回 deleted_at IS NULL 的数据；恢复及最终物理清理由应用层处理。
 CREATE DATABASE IF NOT EXISTS `mealog`
     DEFAULT CHARACTER SET utf8mb4
@@ -20,20 +20,18 @@ CREATE TABLE IF NOT EXISTS `users`
     `updated_at`     DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
     `deleted_at`     DATETIME(3)   NULL COMMENT '软删除时间，为空表示未删除',
     PRIMARY KEY (`id`),
-    KEY `idx_users_wechat_openid_deleted` (`wechat_openid`, `deleted_at`),
+    UNIQUE KEY `uk_users_wechat_openid` (`wechat_openid`),
     KEY `idx_users_wechat_unionid_deleted` (`wechat_unionid`, `deleted_at`)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
     COMMENT = '用户表，保存微信身份和个人资料';
 
--- 店铺表：保存用户外食时选择的腾讯地图店铺或手动创建的店铺，供历史记录复用。
+-- 店铺表：保存用户从腾讯地图选择的店铺，供历史记录复用。
 CREATE TABLE IF NOT EXISTS `stores`
 (
     `id`              CHAR(36)       NOT NULL COMMENT '店铺主键 UUID',
     `user_id`         CHAR(36)       NOT NULL COMMENT '店铺所属用户 UUID',
-    `source_type`     VARCHAR(32)    NOT NULL COMMENT '店铺来源：TENCENT_MAP 腾讯地图，MANUAL 手动创建，由应用层校验',
-    `external_poi_id` VARCHAR(128)   NULL COMMENT '地图服务外部 POI 唯一标识，手动创建时为空',
     `name`            VARCHAR(128)   NOT NULL COMMENT '店铺名称',
     `address`         VARCHAR(255)   NULL COMMENT '店铺地址',
     `latitude`        DECIMAL(10, 7) NULL COMMENT '店铺纬度，范围 -90 到 90',
@@ -42,12 +40,11 @@ CREATE TABLE IF NOT EXISTS `stores`
     `updated_at`      DATETIME(3)    NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
     `deleted_at`      DATETIME(3)    NULL COMMENT '软删除时间，为空表示未删除',
     PRIMARY KEY (`id`),
-    KEY `idx_stores_user_deleted_source_poi` (`user_id`, `deleted_at`, `source_type`, `external_poi_id`),
     KEY `idx_stores_user_deleted_name` (`user_id`, `deleted_at`, `name`)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT = '店铺表，保存外食记录可关联的地图或手动店铺';
+    COMMENT = '店铺表，保存外食记录可关联的腾讯地图店铺';
 
 -- 菜谱表：保存用户的菜谱草稿和已完善菜谱，并记录从分享菜谱复制时的来源关系。
 CREATE TABLE IF NOT EXISTS `recipes`
