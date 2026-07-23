@@ -17,9 +17,7 @@ class MealRecord(BaseTable):
         String(100), nullable=False, comment="菜品名称，一条记录只描述一道菜品"
     )
     eaten_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False),
-        nullable=False,
-        comment="进食时间，应用层统一按 UTC 写入并按用户时区展示",
+        DateTime(timezone=False), nullable=False, comment="进食时间"
     )
     source_type: Mapped[str | None] = mapped_column(
         String(20),

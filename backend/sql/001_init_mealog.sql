@@ -7,7 +7,7 @@ CREATE DATABASE IF NOT EXISTS `mealog`
 
 USE `mealog`;
 
--- 用户表：保存微信用户身份、个人资料和时区信息，是所有私人业务数据的归属主体。
+-- 用户表：保存微信用户身份和个人资料，是所有私人业务数据的归属主体。
 CREATE TABLE IF NOT EXISTS `users`
 (
     `id`             CHAR(36)      NOT NULL COMMENT '用户主键 UUID',
@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS `users`
     `wechat_unionid` VARCHAR(64)   NULL COMMENT '微信开放平台 UnionID，未绑定开放平台时为空',
     `nickname`       VARCHAR(64)   NULL COMMENT '用户昵称',
     `avatar_object_key` VARCHAR(512) NULL COMMENT '用户头像在对象存储中的文件键',
-    `timezone`       VARCHAR(64)   NOT NULL DEFAULT 'Asia/Shanghai' COMMENT '用户时区，用于饮食日历按本地日期展示',
     `created_at`     DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
     `updated_at`     DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
     `deleted_at`     DATETIME(3)   NULL COMMENT '软删除时间，为空表示未删除',
@@ -56,7 +55,7 @@ CREATE TABLE IF NOT EXISTS `recipes`
     `cover_object_key` VARCHAR(512) NULL COMMENT '菜谱封面在对象存储中的文件键',
     `steps`            TEXT         NULL COMMENT '菜谱制作步骤',
     `status`           VARCHAR(20)  NOT NULL DEFAULT 'DRAFT' COMMENT '菜谱状态：DRAFT 草稿，COMPLETED 已完善，由应用层根据食材和步骤计算并校验',
-    `share_expires_at` DATETIME(3)  NULL COMMENT '分享过期时间，为空或早于当前 UTC 时间表示不可访问',
+    `share_expires_at` DATETIME(3)  NULL COMMENT '分享过期时间，为空或早于当前时间表示不可访问',
     `created_at`       DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
     `updated_at`       DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
     `deleted_at`       DATETIME(3)  NULL COMMENT '软删除时间，为空表示未删除',
@@ -93,7 +92,7 @@ CREATE TABLE IF NOT EXISTS `meal_records`
     `id`          CHAR(36)      NOT NULL COMMENT '饮食记录主键 UUID',
     `user_id`     CHAR(36)      NOT NULL COMMENT '饮食记录所属用户 UUID',
     `dish_name`   VARCHAR(100)  NOT NULL COMMENT '菜品名称，一条记录只描述一道菜品',
-    `eaten_at`    DATETIME(3)   NOT NULL COMMENT '进食时间，应用层统一按 UTC 写入并按用户时区展示',
+    `eaten_at`    DATETIME(3)   NOT NULL COMMENT '进食时间',
     `source_type` VARCHAR(20)   NULL COMMENT '饮食来源：SELF_MADE 自己做，DINING_OUT 外面买，未选择时为空，由应用层校验',
     `store_id`    CHAR(36)      NULL COMMENT '外面买时可关联的店铺 UUID',
     `recipe_id`   CHAR(36)      NULL COMMENT '自己做时可关联的菜谱 UUID',

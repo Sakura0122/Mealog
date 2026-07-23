@@ -7,7 +7,6 @@ class UserProfile(BaseModel):
     id: str
     nickname: str | None
     avatar_object_key: str | None
-    timezone: str
 
 
 class WechatLoginResponse(BaseModel):

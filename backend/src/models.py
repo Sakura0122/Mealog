@@ -1,8 +1,10 @@
-from datetime import UTC, datetime
-from typing import Any
+from datetime import datetime
+from typing import Any, cast
 from uuid import uuid7
 
-from sqlalchemy import CHAR, DateTime, FetchedValue, event, func
+from sqlalchemy import CHAR, DateTime, FetchedValue, event, func, update
+from sqlalchemy.engine import CursorResult
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -35,10 +37,31 @@ class BaseTable(DeclarativeBase):
     )
 
     def soft_delete(self) -> None:
-        self.deleted_at = datetime.now(UTC).replace(tzinfo=None)
+        self.deleted_at = datetime.now()
 
     def restore(self) -> None:
         self.deleted_at = None
+
+    @classmethod
+    async def soft_delete_by(cls, session: AsyncSession, **conditions: Any) -> int:
+        """
+        批量软删除符合条件的业务数据。
+
+        :param session: 数据库会话
+        :param conditions: 与模型字段同名的等值查询条件
+        :return: 软删除的数据条数
+        """
+
+        result = cast(
+            "CursorResult[Any]",
+            await session.execute(
+                update(cls)
+                .filter_by(**conditions)
+                .where(cls.deleted_at.is_(None))
+                .values(deleted_at=datetime.now())
+            ),
+        )
+        return result.rowcount
 
 
 @event.listens_for(Session, "before_flush")

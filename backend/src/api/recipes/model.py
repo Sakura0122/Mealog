@@ -32,7 +32,7 @@ class Recipe(BaseTable):
     share_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=False),
         nullable=True,
-        comment="分享过期时间，为空或早于当前 UTC 时间表示不可访问",
+        comment="分享过期时间，为空或早于当前时间表示不可访问",
     )
 
 
