@@ -128,6 +128,15 @@ async def _get_owned_recipe(
     user_id: UUID,
     session: AsyncSession,
 ) -> Recipe:
+    """
+    查询属于当前用户的菜谱。
+
+    :param recipe_id: 菜谱 ID
+    :param user_id: 当前用户 ID
+    :param session: 数据库会话
+    :return: 当前用户的菜谱
+    """
+
     recipe = await session.scalar(
         select(Recipe).where(
             Recipe.id == str(recipe_id),
@@ -145,6 +154,16 @@ async def _validate_unique_name(
     session: AsyncSession,
     excluded_recipe_id: str | None = None,
 ) -> None:
+    """
+    校验菜谱名称在当前用户下是否唯一。
+
+    :param name: 待校验的菜谱名称
+    :param user_id: 当前用户 ID
+    :param session: 数据库会话
+    :param excluded_recipe_id: 编辑时需要排除的当前菜谱 ID
+    :return: 无返回值
+    """
+
     statement = select(Recipe.id).where(
         Recipe.user_id == str(user_id),
         Recipe.name == name,
@@ -156,6 +175,14 @@ async def _validate_unique_name(
 
 
 async def _get_ingredients(recipe_id: str, session: AsyncSession) -> list[RecipeIngredient]:
+    """
+    按录入顺序查询菜谱的食材。
+
+    :param recipe_id: 菜谱 ID
+    :param session: 数据库会话
+    :return: 按展示顺序排列的食材列表
+    """
+
     return list(
         (
             await session.scalars(
@@ -168,6 +195,14 @@ async def _get_ingredients(recipe_id: str, session: AsyncSession) -> list[Recipe
 
 
 def _create_ingredients(recipe_id: str, names: list[str]) -> list[RecipeIngredient]:
+    """
+    按请求中的名称顺序构建菜谱食材模型。
+
+    :param recipe_id: 菜谱 ID
+    :param names: 食材名称列表
+    :return: 待写入数据库的食材模型列表
+    """
+
     return [
         RecipeIngredient(recipe_id=recipe_id, name=name, sort_order=index)
         for index, name in enumerate(names)
@@ -175,11 +210,25 @@ def _create_ingredients(recipe_id: str, names: list[str]) -> list[RecipeIngredie
 
 
 def _calculate_status(ingredients: list[str], steps: str | None) -> RecipeStatus:
+    """
+    根据食材和制作步骤的完整性计算菜谱状态。
+
+    :param ingredients: 菜谱食材名称列表
+    :param steps: 菜谱制作步骤
+    :return: 草稿或已完善状态
+    """
+
     # 产品状态只由食材和步骤是否完整决定，封面不影响草稿状态。
     return "COMPLETED" if ingredients and steps is not None else "DRAFT"
 
 
 def _usage_count_subquery():
+    """
+    构建统计每个菜谱有效饮食记录数量的相关子查询。
+
+    :return: 可嵌入菜谱列表查询的标量子查询
+    """
+
     return (
         select(func.count())
         .select_from(MealRecord)
@@ -190,6 +239,14 @@ def _usage_count_subquery():
 
 
 def _to_list_item_response(recipe: Recipe, usage_count: int) -> RecipeListItemResponse:
+    """
+    将菜谱模型转换为列表项响应，并补充公开封面地址和使用次数。
+
+    :param recipe: 菜谱模型
+    :param usage_count: 菜谱关联的有效饮食记录数量
+    :return: 菜谱列表项响应
+    """
+
     return RecipeListItemResponse(
         id=recipe.id,
         name=recipe.name,
@@ -209,6 +266,15 @@ def _to_recipe_response(
     ingredients: list[RecipeIngredient],
     usage_count: int,
 ) -> RecipeResponse:
+    """
+    将菜谱及其食材转换为完整详情响应。
+
+    :param recipe: 菜谱模型
+    :param ingredients: 按展示顺序排列的食材模型
+    :param usage_count: 菜谱关联的有效饮食记录数量
+    :return: 菜谱详情响应
+    """
+
     return RecipeResponse(
         id=recipe.id,
         name=recipe.name,
