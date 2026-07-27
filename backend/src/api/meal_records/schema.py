@@ -76,6 +76,12 @@ class MealRecordCreate(MealRecordPayload):
     pass
 
 
+class MealRecordCreateResponse(BaseModel):
+    """新增饮食记录响应。"""
+
+    id: str = Field(description="新建饮食记录 ID")
+
+
 class MealRecordUpdate(MealRecordPayload):
     """更新饮食记录请求。"""
 
@@ -135,7 +141,13 @@ class MealRecordResponse(BaseModel):
         description="饮食来源：SELF_MADE 自己做，DINING_OUT 外面买，未选择时为空"
     )
     store_id: str | None = Field(description="关联店铺 ID，未关联时为空")
+    store_name: str | None = Field(description="关联店铺名称，未关联时为空")
+    store_address: str | None = Field(description="关联店铺地址，未关联或未填写时为空")
     recipe_id: str | None = Field(description="关联菜谱 ID，未关联时为空")
+    recipe_name: str | None = Field(description="关联菜谱名称，未关联时为空")
+    recipe_status: Literal["DRAFT", "COMPLETED"] | None = Field(
+        description="关联菜谱状态，未关联时为空"
+    )
     note: str | None = Field(description="个人备注，未填写时为空")
     images: list[MealRecordImageResponse] = Field(description="按展示顺序排列的记录图片")
     created_at: datetime = Field(description="记录创建时间")

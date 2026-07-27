@@ -18,6 +18,7 @@ from src.api.meal_records.schema import (
     MealSourceType,
 )
 from src.api.recipes.model import Recipe
+from src.api.recipes.schema import RecipeStatus
 from src.api.stores.model import Store
 from src.common.exceptions import BusinessException
 from src.common.page import PageRequest, PageResult
@@ -30,14 +31,14 @@ async def create_meal_record(
     payload: MealRecordCreate,
     user_id: UUID,
     session: AsyncSession,
-) -> None:
+) -> str:
     """
     创建当前用户的饮食记录及其图片。
 
     :param payload: 饮食记录创建参数
     :param user_id: 当前用户 ID
     :param session: 数据库会话
-    :return: 无返回值
+    :return: 新建饮食记录 ID
     """
 
     # 1. 校验饮食来源与关联店铺、菜谱的关系及数据归属
@@ -59,6 +60,7 @@ async def create_meal_record(
     # 3. 按请求顺序创建图片，首张图片作为封面
     session.add_all(_create_images(record.id, payload.images))
     await session.flush()
+    return record.id
 
 
 async def list_meal_records(
@@ -190,9 +192,23 @@ async def get_meal_record(
     # 1. 按记录 ID 和当前用户查询记录，避免访问其他用户的数据
     record = await _get_owned_record(record_id, user_id, session)
 
-    # 2. 查询记录图片并组装详情响应
+    # 2. 查询记录图片和关联展示信息并组装详情响应
     images = (await _get_record_images([record.id], session))[record.id]
-    return _to_record_response(record, images)
+    store = (
+        await session.scalar(
+            select(Store).where(Store.id == record.store_id, Store.user_id == str(user_id))
+        )
+        if record.store_id is not None
+        else None
+    )
+    recipe = (
+        await session.scalar(
+            select(Recipe).where(Recipe.id == record.recipe_id, Recipe.user_id == str(user_id))
+        )
+        if record.recipe_id is not None
+        else None
+    )
+    return _to_record_response(record, images, store, recipe)
 
 
 async def update_meal_record(
@@ -385,12 +401,16 @@ def _to_image_response(image: MealRecordImage) -> MealRecordImageResponse:
 def _to_record_response(
     record: MealRecord,
     images: list[MealRecordImage],
+    store: Store | None,
+    recipe: Recipe | None,
 ) -> MealRecordResponse:
     """
     将饮食记录及其图片转换为完整响应数据。
 
     :param record: 饮食记录模型
     :param images: 饮食记录图片模型列表
+    :param store: 关联店铺，未关联时为空
+    :param recipe: 关联菜谱，未关联时为空
     :return: 饮食记录响应数据
     """
 
@@ -400,7 +420,11 @@ def _to_record_response(
         eaten_at=record.eaten_at,
         source_type=cast("MealSourceType | None", record.source_type),
         store_id=record.store_id,
+        store_name=store.name if store is not None else None,
+        store_address=store.address if store is not None else None,
         recipe_id=record.recipe_id,
+        recipe_name=recipe.name if recipe is not None else None,
+        recipe_status=cast("RecipeStatus", recipe.status) if recipe is not None else None,
         note=record.note,
         images=[_to_image_response(image) for image in images],
         created_at=record.created_at,

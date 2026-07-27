@@ -8,6 +8,7 @@ from src.api.meal_records import service as meal_record_service
 from src.api.meal_records.schema import (
     MealRecordCalendarResponse,
     MealRecordCreate,
+    MealRecordCreateResponse,
     MealRecordListItemResponse,
     MealRecordResponse,
     MealRecordUpdate,
@@ -19,14 +20,14 @@ from src.core.dependencies import CurrentUserIdDep, SessionDep
 router = APIRouter(prefix="/meal-records", tags=["饮食记录"])
 
 
-@router.post("", response_model=Result[None], summary="新增饮食记录")
+@router.post("", response_model=Result[MealRecordCreateResponse], summary="新增饮食记录")
 async def create_record(
     payload: MealRecordCreate,
     user_id: CurrentUserIdDep,
     session: SessionDep,
-) -> Result[None]:
-    await meal_record_service.create_meal_record(payload, user_id, session)
-    return Result.success()
+) -> Result[MealRecordCreateResponse]:
+    record_id = await meal_record_service.create_meal_record(payload, user_id, session)
+    return Result.success(MealRecordCreateResponse(id=record_id))
 
 
 @router.get(

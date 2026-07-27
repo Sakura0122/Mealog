@@ -32,7 +32,7 @@ const uploadImage = (
 
 export const fileApi = {
   uploadImage(filePath: string): Promise<UploadFileResponse> {
-    return uploadImage(filePath, 'images', '封面上传失败，请稍后重试')
+    return uploadImage(filePath, 'images', '图片上传失败，请稍后重试')
   },
   uploadAvatar(filePath: string): Promise<UploadFileResponse> {
     return uploadImage(filePath, 'avatar', '头像上传失败，请稍后重试')

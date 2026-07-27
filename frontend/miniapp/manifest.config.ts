@@ -46,6 +46,7 @@ export default defineManifestConfig({
     usingComponents: true,
     darkmode: true,
     themeLocation: 'theme.json',
+    requiredPrivateInfos: ['chooseLocation'],
   },
   'app-harmony': {},
   'mp-harmony': {},

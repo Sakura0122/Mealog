@@ -14,6 +14,7 @@ declare module 'vue' {
     RecipeDetailContent: typeof import('./components/RecipeDetailContent.vue')['default']
     WdActionSheet: typeof import('@wot-ui/ui/components/wd-action-sheet/wd-action-sheet.vue')['default']
     WdConfigProvider: typeof import('@wot-ui/ui/components/wd-config-provider/wd-config-provider.vue')['default']
+    WdDatetimePicker: typeof import('@wot-ui/ui/components/wd-datetime-picker/wd-datetime-picker.vue')['default']
     WdDialog: typeof import('@wot-ui/ui/components/wd-dialog/wd-dialog.vue')['default']
     WdEmpty: typeof import('@wot-ui/ui/components/wd-empty/wd-empty.vue')['default']
     WdIcon: typeof import('@wot-ui/ui/components/wd-icon/wd-icon.vue')['default']

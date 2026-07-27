@@ -19,6 +19,12 @@ declare global {
   const defineComponent: typeof import('vue')['defineComponent']
   const defineStore: typeof import('pinia')['defineStore']
   const effectScope: typeof import('vue')['effectScope']
+  const formatDateParam: typeof import('./utils/date')['formatDateParam']
+  const formatDateTimePayload: typeof import('./utils/date')['formatDateTimePayload']
+  const formatDateTimeText: typeof import('./utils/date')['formatDateTimeText']
+  const formatMonthParam: typeof import('./utils/date')['formatMonthParam']
+  const formatPeriodText: typeof import('./utils/date')['formatPeriodText']
+  const formatTimeText: typeof import('./utils/date')['formatTimeText']
   const getActivePinia: typeof import('pinia')['getActivePinia']
   const getAuthorizationHeader: typeof import('./utils/request')['getAuthorizationHeader']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
@@ -75,6 +81,7 @@ declare global {
   const onUnload: typeof import('@dcloudio/uni-app')['onUnload']
   const onUnmounted: typeof import('vue')['onUnmounted']
   const onUpdated: typeof import('vue')['onUpdated']
+  const parseLocalDate: typeof import('./utils/date')['parseLocalDate']
   const provide: typeof import('vue')['provide']
   const reactive: typeof import('vue')['reactive']
   const readonly: typeof import('vue')['readonly']
@@ -133,6 +140,12 @@ declare module 'vue' {
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly defineStore: UnwrapRef<typeof import('pinia')['defineStore']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
+    readonly formatDateParam: UnwrapRef<typeof import('./utils/date')['formatDateParam']>
+    readonly formatDateTimePayload: UnwrapRef<typeof import('./utils/date')['formatDateTimePayload']>
+    readonly formatDateTimeText: UnwrapRef<typeof import('./utils/date')['formatDateTimeText']>
+    readonly formatMonthParam: UnwrapRef<typeof import('./utils/date')['formatMonthParam']>
+    readonly formatPeriodText: UnwrapRef<typeof import('./utils/date')['formatPeriodText']>
+    readonly formatTimeText: UnwrapRef<typeof import('./utils/date')['formatTimeText']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
     readonly getAuthorizationHeader: UnwrapRef<typeof import('./utils/request')['getAuthorizationHeader']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
@@ -189,6 +202,7 @@ declare module 'vue' {
     readonly onUnload: UnwrapRef<typeof import('@dcloudio/uni-app')['onUnload']>
     readonly onUnmounted: UnwrapRef<typeof import('vue')['onUnmounted']>
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
+    readonly parseLocalDate: UnwrapRef<typeof import('./utils/date')['parseLocalDate']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>

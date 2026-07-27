@@ -10,7 +10,11 @@ interface ApiRequestOptions {
   data?: UniApp.RequestOptions['data']
 }
 
-export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL
+if (!configuredApiBaseUrl)
+  throw new Error('缺少 VITE_API_BASE_URL 配置')
+
+export const apiBaseUrl = configuredApiBaseUrl.replace(/\/$/, '')
 
 export const getAuthorizationHeader = () => {
   const token = uni.getStorageSync<string>('token')
