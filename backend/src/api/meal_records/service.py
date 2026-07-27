@@ -1,3 +1,4 @@
+from datetime import date
 from typing import cast
 from uuid import UUID
 
@@ -6,9 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.meal_records.model import MealRecord, MealRecordImage
 from src.api.meal_records.schema import (
+    MealRecordCalendarDayResponse,
+    MealRecordCalendarResponse,
     MealRecordCreate,
     MealRecordImageInput,
     MealRecordImageResponse,
+    MealRecordListItemResponse,
     MealRecordResponse,
     MealRecordUpdate,
     MealSourceType,
@@ -19,6 +23,7 @@ from src.common.exceptions import BusinessException
 from src.common.page import PageRequest, PageResult
 from src.common.result_code import ResultCodeEnum
 from src.rustfs.url import build_public_file_url
+from src.utils.datetime import get_date_range, get_month_range
 
 
 async def _validate_relations(
@@ -176,6 +181,31 @@ def _to_record_response(
     )
 
 
+def _to_list_item_response(
+    record: MealRecord,
+    cover_image: MealRecordImage | None,
+) -> MealRecordListItemResponse:
+    """
+    将饮食记录转换为首页列表使用的轻量响应数据。
+
+    :param record: 饮食记录模型
+    :param cover_image: 饮食记录封面图片
+    :return: 饮食记录列表项
+    """
+
+    return MealRecordListItemResponse(
+        id=record.id,
+        dish_name=record.dish_name,
+        eaten_at=record.eaten_at,
+        note=record.note,
+        cover_url=(
+            build_public_file_url(cover_image.original_object_key)
+            if cover_image is not None
+            else None
+        ),
+    )
+
+
 async def _get_record_images(
     record_ids: list[str],
     session: AsyncSession,
@@ -202,6 +232,32 @@ async def _get_record_images(
     for image in images:
         grouped_images[image.meal_record_id].append(image)
     return grouped_images
+
+
+async def _get_cover_images(
+    record_ids: list[str],
+    session: AsyncSession,
+) -> dict[str, MealRecordImage]:
+    """
+    批量查询饮食记录封面图片。
+
+    :param record_ids: 饮食记录 ID 列表
+    :param session: 数据库会话
+    :return: 以饮食记录 ID 为键的封面图片
+    """
+
+    if not record_ids:
+        return {}
+
+    images = (
+        await session.scalars(
+            select(MealRecordImage).where(
+                MealRecordImage.meal_record_id.in_(record_ids),
+                MealRecordImage.is_cover.is_(True),
+            )
+        )
+    ).all()
+    return {image.meal_record_id: image for image in images}
 
 
 async def create_meal_record(
@@ -243,26 +299,41 @@ async def list_meal_records(
     page: PageRequest,
     user_id: UUID,
     session: AsyncSession,
-) -> PageResult[MealRecordResponse]:
+    target_date: date | None = None,
+) -> PageResult[MealRecordListItemResponse]:
     """
     分页查询当前用户的饮食记录。
 
     :param page: 分页及排序参数
     :param user_id: 当前用户 ID
     :param session: 数据库会话
+    :param target_date: 需要查询的日期，为空时查询全部记录
     :return: 饮食记录分页数据
     """
 
-    # 1. 按当前用户统计未删除的饮食记录总数
-    user_filter = MealRecord.user_id == str(user_id)
-    total = await session.scalar(select(func.count()).select_from(MealRecord).where(user_filter))
+    # 1. 构建当前用户及可选日期范围的查询条件
+    records_statement = select(MealRecord).where(MealRecord.user_id == str(user_id))
+    count_statement = (
+        select(func.count()).select_from(MealRecord).where(MealRecord.user_id == str(user_id))
+    )
+    if target_date is not None:
+        start_at, end_at = get_date_range(target_date)
+        records_statement = records_statement.where(
+            MealRecord.eaten_at >= start_at,
+            MealRecord.eaten_at < end_at,
+        )
+        count_statement = count_statement.where(
+            MealRecord.eaten_at >= start_at,
+            MealRecord.eaten_at < end_at,
+        )
 
-    # 2. 按分页和排序参数查询当前页记录
+    # 2. 统计符合条件的饮食记录总数
+    total = await session.scalar(count_statement)
+
+    # 3. 按分页和排序参数查询当前页记录
     records = (
         await session.scalars(
-            select(MealRecord)
-            .where(user_filter)
-            .order_by(
+            records_statement.order_by(
                 *page.to_order_by({"eaten_at": MealRecord.eaten_at}, [MealRecord.eaten_at.desc()])
             )
             .offset(page.offset)
@@ -270,12 +341,70 @@ async def list_meal_records(
         )
     ).all()
 
-    # 3. 批量查询当前页图片，避免逐条查询
-    images_by_record = await _get_record_images([record.id for record in records], session)
+    # 4. 批量查询当前页封面图片，避免返回首页不需要的全部图片
+    cover_images = await _get_cover_images([record.id for record in records], session)
 
-    # 4. 组装记录响应和分页信息
-    items = [_to_record_response(record, images_by_record[record.id]) for record in records]
+    # 5. 组装轻量列表响应和分页信息
+    items = [_to_list_item_response(record, cover_images.get(record.id)) for record in records]
     return PageResult.of(page, total or 0, items)
+
+
+async def get_meal_record_calendar(
+    month: str,
+    user_id: UUID,
+    session: AsyncSession,
+) -> MealRecordCalendarResponse:
+    """
+    查询当前用户某个月份的饮食记录日历摘要。
+
+    :param month: 月份，格式为 YYYY-MM
+    :param user_id: 当前用户 ID
+    :param session: 数据库会话
+    :return: 月份统计及有记录日期的数量和封面
+    """
+
+    # 1. 按月份范围查询记录，并按进食时间倒序确定每日封面优先级
+    start_at, end_at = get_month_range(month)
+    record_rows = (
+        await session.execute(
+            select(MealRecord.id, MealRecord.eaten_at)
+            .where(
+                MealRecord.user_id == str(user_id),
+                MealRecord.eaten_at >= start_at,
+                MealRecord.eaten_at < end_at,
+            )
+            .order_by(MealRecord.eaten_at.desc(), MealRecord.created_at.desc())
+        )
+    ).all()
+
+    # 2. 批量查询月份内所有记录的封面图片
+    cover_images = await _get_cover_images([record_id for record_id, _ in record_rows], session)
+
+    # 3. 汇总每日记录数，并取当天最新一条带图片记录的封面
+    day_counts: dict[date, int] = {}
+    day_cover_urls: dict[date, str] = {}
+    for record_id, eaten_at in record_rows:
+        record_date = eaten_at.date()
+        day_counts[record_date] = day_counts.get(record_date, 0) + 1
+        cover_image = cover_images.get(record_id)
+        if record_date not in day_cover_urls and cover_image is not None:
+            day_cover_urls[record_date] = build_public_file_url(cover_image.original_object_key)
+
+    # 4. 按日期升序组装月历响应
+    days = [
+        MealRecordCalendarDayResponse(
+            date=record_date,
+            record_count=day_counts[record_date],
+            cover_url=day_cover_urls.get(record_date),
+        )
+        for record_date in sorted(day_counts)
+    ]
+    return MealRecordCalendarResponse(
+        month=month,
+        total=len(record_rows),
+        recorded_days=len(days),
+        days=days,
+    )
 
 
 async def get_meal_record(

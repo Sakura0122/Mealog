@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -54,6 +54,27 @@ class MealRecordImageResponse(BaseModel):
     processed_url: str | None
     sort_order: int
     is_cover: bool
+
+
+class MealRecordListItemResponse(BaseModel):
+    id: str
+    dish_name: str
+    eaten_at: datetime
+    note: str | None
+    cover_url: str | None
+
+
+class MealRecordCalendarDayResponse(BaseModel):
+    date: date
+    record_count: int
+    cover_url: str | None
+
+
+class MealRecordCalendarResponse(BaseModel):
+    month: str
+    total: int
+    recorded_days: int
+    days: list[MealRecordCalendarDayResponse]
 
 
 class MealRecordResponse(BaseModel):

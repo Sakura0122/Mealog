@@ -1,10 +1,17 @@
+from datetime import date
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from src.api.meal_records import service as meal_record_service
-from src.api.meal_records.schema import MealRecordCreate, MealRecordResponse, MealRecordUpdate
+from src.api.meal_records.schema import (
+    MealRecordCalendarResponse,
+    MealRecordCreate,
+    MealRecordListItemResponse,
+    MealRecordResponse,
+    MealRecordUpdate,
+)
 from src.common.page import PageRequest, PageResult
 from src.common.result import Result
 from src.core.dependencies import CurrentUserIdDep, SessionDep
@@ -22,13 +29,38 @@ async def create_record(
     return Result.success()
 
 
-@router.get("", response_model=Result[PageResult[MealRecordResponse]], summary="分页查询饮食记录")
+@router.get(
+    "",
+    response_model=Result[PageResult[MealRecordListItemResponse]],
+    summary="分页查询饮食记录",
+)
 async def list_records(
     user_id: CurrentUserIdDep,
     session: SessionDep,
-    page: Annotated[PageRequest, Query()],
-) -> Result[PageResult[MealRecordResponse]]:
-    res = await meal_record_service.list_meal_records(page, user_id, session)
+    page: Annotated[PageRequest, Depends()],
+    target_date: Annotated[
+        date | None,
+        Query(alias="date", description="进食日期，格式为 YYYY-MM-DD"),
+    ] = None,
+) -> Result[PageResult[MealRecordListItemResponse]]:
+    res = await meal_record_service.list_meal_records(page, user_id, session, target_date)
+    return Result.success(res)
+
+
+@router.get(
+    "/calendar",
+    response_model=Result[MealRecordCalendarResponse],
+    summary="查询饮食记录月历",
+)
+async def get_record_calendar(
+    month: Annotated[
+        str,
+        Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$", description="月份，格式为 YYYY-MM"),
+    ],
+    user_id: CurrentUserIdDep,
+    session: SessionDep,
+) -> Result[MealRecordCalendarResponse]:
+    res = await meal_record_service.get_meal_record_calendar(month, user_id, session)
     return Result.success(res)
 
 
