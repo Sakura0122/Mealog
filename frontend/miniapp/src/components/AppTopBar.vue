@@ -11,6 +11,11 @@ withDefaults(defineProps<{
   showBack: true,
 })
 
+const emit = defineEmits<{
+  edit: []
+  more: []
+}>()
+
 const goBack = () => {
   uni.navigateBack()
 }
@@ -22,10 +27,10 @@ const goBack = () => {
       <wd-icon name="arrow-left" size="22px" color="#1c1c1a" />
     </button>
     <view class="ml-auto flex items-center gap-3">
-      <button v-if="edit" class="m-0 h-8 w-8 flex items-center justify-center border-0 bg-transparent p-0 after:border-0" aria-label="编辑">
+      <button v-if="edit" class="m-0 h-8 w-8 flex items-center justify-center border-0 bg-transparent p-0 after:border-0" aria-label="编辑" @click="emit('edit')">
         <wd-icon name="edit" size="21px" color="#1c1c1a" />
       </button>
-      <button v-if="more" class="m-0 h-8 w-8 flex items-center justify-center border-0 bg-transparent p-0 after:border-0" aria-label="更多">
+      <button v-if="more" class="m-0 h-8 w-8 flex items-center justify-center border-0 bg-transparent p-0 after:border-0" aria-label="更多" @click="emit('more')">
         <wd-icon name="more-vertical" size="21px" color="#5d5d5b" />
       </button>
       <button v-if="close" class="m-0 h-8 w-8 flex items-center justify-center border-0 bg-transparent p-0 after:border-0" aria-label="关闭" @click="goBack">

@@ -12,9 +12,13 @@ declare module 'vue' {
     GlobalDialog: typeof import('./components/GlobalDialog.vue')['default']
     GlobalToast: typeof import('./components/GlobalToast.vue')['default']
     RecipeDetailContent: typeof import('./components/RecipeDetailContent.vue')['default']
+    WdActionSheet: typeof import('@wot-ui/ui/components/wd-action-sheet/wd-action-sheet.vue')['default']
     WdConfigProvider: typeof import('@wot-ui/ui/components/wd-config-provider/wd-config-provider.vue')['default']
     WdDialog: typeof import('@wot-ui/ui/components/wd-dialog/wd-dialog.vue')['default']
+    WdEmpty: typeof import('@wot-ui/ui/components/wd-empty/wd-empty.vue')['default']
     WdIcon: typeof import('@wot-ui/ui/components/wd-icon/wd-icon.vue')['default']
+    WdLoading: typeof import('@wot-ui/ui/components/wd-loading/wd-loading.vue')['default']
+    WdLoadmore: typeof import('@wot-ui/ui/components/wd-loadmore/wd-loadmore.vue')['default']
     WdPopup: typeof import('@wot-ui/ui/components/wd-popup/wd-popup.vue')['default']
     WdToast: typeof import('@wot-ui/ui/components/wd-toast/wd-toast.vue')['default']
   }
