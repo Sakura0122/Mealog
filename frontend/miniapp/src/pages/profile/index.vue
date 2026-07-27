@@ -1,10 +1,46 @@
 <script setup lang="ts">
+import type { UserProfile, UserStatistics } from '@/api/users/type'
+import { userApi } from '@/api/users'
+import { getErrorMessage } from '@/utils/request'
+
 definePage({
   name: 'profile',
   style: {
     navigationStyle: 'custom',
   },
 })
+
+const profile = ref<UserProfile>()
+const statistics = ref<UserStatistics>()
+const loading = ref(false)
+const loadError = ref('')
+const loadProfile = async () => {
+  loading.value = true
+  loadError.value = ''
+  try {
+    const [profileData, statisticsData] = await Promise.all([
+      userApi.profile(),
+      userApi.statistics(),
+    ])
+    profile.value = profileData
+    statistics.value = statisticsData
+  }
+  catch (error) {
+    loadError.value = getErrorMessage(error)
+  }
+  finally {
+    loading.value = false
+  }
+}
+onShow(loadProfile)
+
+const formatCount = (count: number | undefined) => {
+  return count === undefined ? '--' : count.toLocaleString('zh-CN')
+}
+
+const editProfile = () => {
+  uni.navigateTo({ url: '/pages/profile-edit/index' })
+}
 
 const openRecipes = () => {
   uni.navigateTo({ url: '/pages/recipes/index' })
@@ -18,12 +54,24 @@ const openRecipes = () => {
         Mealog
       </text>
 
-      <view class="mt-7 flex items-center">
-        <image src="/static/images/profile-avatar.jpg" mode="aspectFill" class="h-24 w-24 rounded-full" />
-        <text class="ml-4 text-2xl text-[#1c1c1a] font-medium">
-          Hana
-        </text>
+      <view v-if="loading && !profile" class="mt-7 h-24 flex items-center">
+        <wd-loading text="加载个人信息" color="#71836b" />
       </view>
+
+      <view v-else class="mt-7 flex items-center">
+        <button class="m-0 h-24 w-24 shrink-0 overflow-hidden border-0 rounded-full bg-[#edf1ea] p-0 after:border-0" aria-label="编辑头像" @click="editProfile">
+          <image :src="profile?.avatar_url || '/static/images/profile-avatar.jpg'" mode="aspectFill" class="h-full w-full" />
+        </button>
+        <button class="m-0 ml-4 min-w-0 border-0 bg-transparent p-0 text-left after:border-0" @click="editProfile">
+          <text class="block truncate text-2xl text-[#1c1c1a] font-medium">
+            {{ profile?.nickname || '设置昵称' }}
+          </text>
+        </button>
+      </view>
+
+      <button v-if="loadError" class="m-0 mt-3 border-0 bg-transparent p-0 text-sm text-[#a14444] after:border-0" @click="loadProfile">
+        {{ loadError }}，点击重试
+      </button>
 
       <view class="grid grid-cols-2 mt-7 gap-4">
         <view class="rounded-3xl bg-[#f3f6ef] px-4 py-2.5">
@@ -31,7 +79,7 @@ const openRecipes = () => {
             累计记录
           </text>
           <text class="mt-1 block text-2xl text-[#1d2a19] font-semibold leading-8">
-            1,284
+            {{ formatCount(statistics?.total_records) }}
           </text>
         </view>
         <view class="rounded-3xl bg-[#f3f6ef] px-4 py-2.5">
@@ -39,7 +87,7 @@ const openRecipes = () => {
             记录天数
           </text>
           <text class="mt-1 block text-2xl text-[#1d2a19] font-semibold leading-8">
-            365
+            {{ formatCount(statistics?.recorded_days) }}
           </text>
         </view>
       </view>

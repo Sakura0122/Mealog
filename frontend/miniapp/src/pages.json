@@ -77,7 +77,17 @@
       "style": {
         "navigationStyle": "custom"
       }
+    },
+    // #ifdef MP-WEIXIN
+    {
+      "path": "pages/profile-edit/index",
+      "type": "page",
+      "name": "profile-edit",
+      "style": {
+        "navigationStyle": "custom"
+      }
     }
+    // #endif
   ],
   "subPackages": []
 }
