@@ -1,6 +1,7 @@
 import type { UploadFileResponse } from './type'
-import type { ApiResult } from '@/utils/request'
-import { apiBaseUrl, getAuthorizationHeader, unwrapApiResult } from '@/utils/request'
+import type { ApiResult } from '@/utils/api'
+import { apiBaseUrl, unwrapApiResult } from '@/utils/api'
+import { getAuthorizationHeader, withAuthRetry } from '@/utils/request'
 
 type ImageUploadType = 'avatar' | 'images'
 
@@ -9,23 +10,25 @@ const uploadImage = (
   uploadType: ImageUploadType,
   failureMessage: string,
 ): Promise<UploadFileResponse> => {
-  return new Promise((resolve, reject) => {
-    uni.uploadFile({
-      url: `${apiBaseUrl}/api/files/upload`,
-      filePath,
-      name: 'file',
-      formData: { type: uploadType },
-      header: getAuthorizationHeader(),
-      success: (response) => {
-        try {
-          const result = JSON.parse(response.data) as ApiResult<UploadFileResponse>
-          resolve(unwrapApiResult(result))
-        }
-        catch (error) {
-          reject(error)
-        }
-      },
-      fail: () => reject(new Error(failureMessage)),
+  return withAuthRetry(() => {
+    return new Promise((resolve, reject) => {
+      uni.uploadFile({
+        url: `${apiBaseUrl}/api/files/upload`,
+        filePath,
+        name: 'file',
+        formData: { type: uploadType },
+        header: getAuthorizationHeader(),
+        success: (response) => {
+          try {
+            const result = JSON.parse(response.data) as ApiResult<UploadFileResponse>
+            resolve(unwrapApiResult(result))
+          }
+          catch (error) {
+            reject(error)
+          }
+        },
+        fail: () => reject(new Error(failureMessage)),
+      })
     })
   })
 }

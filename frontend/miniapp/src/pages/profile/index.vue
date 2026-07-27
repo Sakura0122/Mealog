@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { UserProfile, UserStatistics } from '@/api/users/type'
+import { recipeApi } from '@/api/recipes'
 import { userApi } from '@/api/users'
 import { getErrorMessage } from '@/utils/request'
 
@@ -12,18 +13,22 @@ definePage({
 
 const profile = ref<UserProfile>()
 const statistics = ref<UserStatistics>()
+const recipeCount = ref<number>()
 const loading = ref(false)
 const loadError = ref('')
 const loadProfile = async () => {
   loading.value = true
   loadError.value = ''
   try {
-    const [profileData, statisticsData] = await Promise.all([
+    // 分页响应已包含总数，只查询首条数据即可同步个人页的菜谱数量。
+    const [profileData, statisticsData, recipePage] = await Promise.all([
       userApi.profile(),
       userApi.statistics(),
+      recipeApi.list({ current_page: 1, page_size: 1 }),
     ])
     profile.value = profileData
     statistics.value = statisticsData
+    recipeCount.value = recipePage.total
   }
   catch (error) {
     loadError.value = getErrorMessage(error)
@@ -45,15 +50,28 @@ const editProfile = () => {
 const openRecipes = () => {
   uni.navigateTo({ url: '/pages/recipes/index' })
 }
+
+const openPrivacy = () => {
+  uni.navigateTo({ url: '/pages/privacy/index' })
+}
+
+const openAbout = () => {
+  uni.navigateTo({ url: '/pages/about/index' })
+}
 </script>
 
 <template>
   <view class="min-h-screen bg-[#f8fafc] pb-32">
-    <view class="px-5 pt-8">
-      <text class="text-[28px] text-[#52634c] font-bold leading-7">
-        Mealog
-      </text>
+    <!-- 个人页品牌标题与其他自定义导航页面保持一致的顶部安全距离。 -->
+    <wd-navbar safe-area-inset-top custom-style="background: transparent;">
+      <template #left>
+        <text class="text-[28px] text-[#52634c] font-bold leading-7">
+          Mealog
+        </text>
+      </template>
+    </wd-navbar>
 
+    <view class="px-5">
       <view v-if="loading && !profile" class="mt-7 h-24 flex items-center">
         <wd-loading text="加载个人信息" color="#71836b" />
       </view>
@@ -101,11 +119,11 @@ const openRecipes = () => {
             我的菜谱
           </text>
           <text class="ml-3 rounded-full bg-[#d5e8cb] px-2 py-1 text-xs text-[#42543d]">
-            18
+            {{ formatCount(recipeCount) }}
           </text>
           <wd-icon name="arrow-right" size="18px" color="#7e847b" custom-class="ml-auto" />
         </button>
-        <button class="m-0 h-[89px] w-full flex items-center border-0 border-b border-[#e5e2df] bg-transparent px-4 text-left after:border-0">
+        <button class="m-0 h-[89px] w-full flex items-center border-0 border-b border-[#e5e2df] bg-transparent px-4 text-left after:border-0" @click="openPrivacy">
           <view class="h-10 w-10 flex items-center justify-center rounded-full bg-[#f8faf7]">
             <wd-icon name="lock" size="22px" color="#59604f" />
           </view>
@@ -114,7 +132,7 @@ const openRecipes = () => {
           </text>
           <wd-icon name="arrow-right" size="18px" color="#7e847b" custom-class="ml-auto" />
         </button>
-        <button class="m-0 h-[89px] w-full flex items-center border-0 bg-transparent px-4 text-left after:border-0">
+        <button class="m-0 h-[89px] w-full flex items-center border-0 bg-transparent px-4 text-left after:border-0" @click="openAbout">
           <view class="h-10 w-10 flex items-center justify-center rounded-full bg-[#f8faf7]">
             <wd-icon name="info-circle" size="22px" color="#59604f" />
           </view>

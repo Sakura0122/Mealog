@@ -1,6 +1,13 @@
 <script setup lang="ts">
+import { initializeAuth } from '@/utils/request'
+
 defineOptions({
   name: 'App',
+})
+
+onLaunch(() => {
+  // 页面请求会复用该 Promise 并等待登录，此处仅负责尽早启动登录。
+  initializeAuth().catch(() => {})
 })
 </script>
 

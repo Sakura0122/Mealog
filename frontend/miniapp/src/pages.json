@@ -78,7 +78,22 @@
         "navigationStyle": "custom"
       }
     },
-    // #ifdef MP-WEIXIN
+    {
+      "path": "pages/about/index",
+      "type": "page",
+      "name": "about",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/privacy/index",
+      "type": "page",
+      "name": "privacy",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
     {
       "path": "pages/profile-edit/index",
       "type": "page",
@@ -87,7 +102,6 @@
         "navigationStyle": "custom"
       }
     }
-    // #endif
   ],
   "subPackages": []
 }

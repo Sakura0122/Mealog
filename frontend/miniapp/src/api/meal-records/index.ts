@@ -1,6 +1,5 @@
 import type {
   MealRecordCalendar,
-  MealRecordCreated,
   MealRecordDetail,
   MealRecordListParams,
   MealRecordPage,
@@ -19,7 +18,7 @@ export const mealRecordApi = {
     return apiRequest<MealRecordDetail>({ url: `/meal-records/${recordId}` })
   },
   create(payload: MealRecordPayload) {
-    return apiRequest<MealRecordCreated>({ url: '/meal-records', method: 'POST', data: payload })
+    return apiRequest<void>({ url: '/meal-records', method: 'POST', data: payload })
   },
   update(recordId: string, payload: MealRecordPayload) {
     return apiRequest<void>({ url: `/meal-records/${recordId}`, method: 'PUT', data: payload })

@@ -76,12 +76,6 @@ class MealRecordCreate(MealRecordPayload):
     pass
 
 
-class MealRecordCreateResponse(BaseModel):
-    """新增饮食记录响应。"""
-
-    id: str = Field(description="新建饮食记录 ID")
-
-
 class MealRecordUpdate(MealRecordPayload):
     """更新饮食记录请求。"""
 

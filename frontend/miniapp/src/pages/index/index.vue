@@ -127,11 +127,6 @@ const chooseRecordImage = (sourceType: 'camera' | 'album') => {
   })
 }
 
-const openRecordEditor = () => {
-  showSourcePicker.value = false
-  uni.navigateTo({ url: '/pages/record-edit/index' })
-}
-
 const openRecordDetail = (recordId: string) => {
   uni.navigateTo({ url: `/pages/record-detail/index?id=${recordId}` })
 }
@@ -139,14 +134,14 @@ const openRecordDetail = (recordId: string) => {
 
 <template>
   <view class="min-h-screen bg-[#f8fafc] pb-32">
-    <view class="h-20 flex items-center justify-between bg-[#fcf9f6]/80 px-5 backdrop-blur-sm">
-      <text class="text-[28px] text-[#52634c] font-bold leading-7">
-        Mealog
-      </text>
-      <view class="h-10 w-10 flex items-center justify-center border-2 border-[#e5e2df] rounded-full bg-[#e1e6c2] text-base text-[#1a1d07] font-semibold">
-        M
-      </view>
-    </view>
+    <!-- 首页只保留品牌标题，右侧留给微信胶囊按钮。 -->
+    <wd-navbar safe-area-inset-top custom-style="background: rgba(252, 249, 246, 0.8);">
+      <template #left>
+        <text class="text-[28px] text-[#52634c] font-bold leading-7">
+          Mealog
+        </text>
+      </template>
+    </wd-navbar>
 
     <view class="mx-auto max-w-[448px] flex flex-col gap-[11px] px-5 pt-4">
       <view class="flex flex-col gap-4 rounded-[32px] bg-white px-6 pb-6 pt-[10px] shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
@@ -275,9 +270,6 @@ const openRecordDetail = (recordId: string) => {
           <text class="text-xl text-[#1c1c1a]">
             从相册选择
           </text>
-        </button>
-        <button class="m-0 h-12 w-full flex items-center justify-center border-0 rounded-full bg-white text-sm text-[#52634c] shadow-[0_8px_18px_rgba(0,0,0,0.1)] after:border-0" @click="openRecordEditor">
-          不添加照片
         </button>
         <button class="mx-auto mt-2 h-14 w-14 flex items-center justify-center border-0 rounded-full bg-[#1c1c1a] p-0 after:border-0" aria-label="关闭" @click="showSourcePicker = false">
           <wd-icon name="close" size="24px" color="#ffffff" />

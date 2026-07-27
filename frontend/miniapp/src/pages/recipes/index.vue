@@ -111,7 +111,7 @@ const createRecipe = () => {
         <button
           v-for="filter in filters"
           :key="filter.label"
-          class="m-0 h-8 border-0 rounded-full px-6 text-xs after:border-0"
+          class="m-0 h-8 flex items-center justify-center border-0 rounded-full px-6 text-xs after:border-0"
           :class="activeStatus === filter.status ? 'bg-[#8ca486] text-white' : 'bg-[#e7e5e2] text-[#454844]'"
           @click="chooseFilter(filter.status)"
         >

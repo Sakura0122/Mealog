@@ -281,18 +281,16 @@ const saveRecord = async () => {
       images: await uploadImages(),
     }
 
-    if (recordId.value) {
+    const isEditing = Boolean(recordId.value)
+    if (isEditing)
       await mealRecordApi.update(recordId.value, payload)
-      uni.navigateBack({
-        success: () => useGlobalToast().success('饮食记录已更新'),
-      })
-      return
-    }
+    else
+      await mealRecordApi.create(payload)
 
-    const created = await mealRecordApi.create(payload)
-    uni.redirectTo({
-      url: `/pages/record-detail/index?id=${created.id}`,
-      success: () => useGlobalToast().success('饮食记录已保存'),
+    // 保存后清空详情和编辑页栈，确保新增、编辑都直接回到首页。
+    uni.reLaunch({
+      url: '/pages/index/index',
+      success: () => useGlobalToast().success(isEditing ? '饮食记录已更新' : '饮食记录已保存'),
     })
   }
   catch (error) {
@@ -360,10 +358,10 @@ const saveRecord = async () => {
         <view class="h-[76px] flex items-center border-b border-[#ebe8e4] px-5">
           <wd-icon name="store" size="19px" color="#5c6949" />
           <view class="ml-4 flex rounded-full bg-[#f6f3f0] p-1">
-            <button class="m-0 h-10 border-0 rounded-full px-5 text-base after:border-0" :class="sourceType === 'SELF_MADE' ? 'bg-white text-[#52634c] shadow-sm' : 'bg-transparent text-[#8f8f8a]'" @click="chooseSource('SELF_MADE')">
+            <button class="m-0 h-10 flex items-center justify-center border-0 rounded-full px-5 text-base after:border-0" :class="sourceType === 'SELF_MADE' ? 'bg-white text-[#52634c] shadow-sm' : 'bg-transparent text-[#8f8f8a]'" @click="chooseSource('SELF_MADE')">
               自己做
             </button>
-            <button class="m-0 h-10 border-0 rounded-full px-5 text-base after:border-0" :class="sourceType === 'DINING_OUT' ? 'bg-white text-[#1c1c1a] shadow-sm' : 'bg-transparent text-[#8f8f8a]'" @click="chooseSource('DINING_OUT')">
+            <button class="m-0 h-10 flex items-center justify-center border-0 rounded-full px-5 text-base after:border-0" :class="sourceType === 'DINING_OUT' ? 'bg-white text-[#1c1c1a] shadow-sm' : 'bg-transparent text-[#8f8f8a]'" @click="chooseSource('DINING_OUT')">
               外面买
             </button>
           </view>

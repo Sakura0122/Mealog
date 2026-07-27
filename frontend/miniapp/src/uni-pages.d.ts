@@ -5,6 +5,8 @@
 
 type _LocationUrl =
   "/pages/index/index" |
+  "/pages/about/index" |
+  "/pages/privacy/index" |
   "/pages/profile/index" |
   "/pages/profile-edit/index" |
   "/pages/recipe-create/index" |

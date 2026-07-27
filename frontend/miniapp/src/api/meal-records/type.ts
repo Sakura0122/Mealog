@@ -16,10 +16,6 @@ export interface MealRecordPayload {
   images: MealRecordImageInput[]
 }
 
-export interface MealRecordCreated {
-  id: string
-}
-
 export interface MealRecordListItem {
   id: string
   dish_name: string

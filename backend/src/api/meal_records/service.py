@@ -31,14 +31,14 @@ async def create_meal_record(
     payload: MealRecordCreate,
     user_id: UUID,
     session: AsyncSession,
-) -> str:
+) -> None:
     """
     创建当前用户的饮食记录及其图片。
 
     :param payload: 饮食记录创建参数
     :param user_id: 当前用户 ID
     :param session: 数据库会话
-    :return: 新建饮食记录 ID
+    :return: 无返回值
     """
 
     # 1. 校验饮食来源与关联店铺、菜谱的关系及数据归属
@@ -60,7 +60,6 @@ async def create_meal_record(
     # 3. 按请求顺序创建图片，首张图片作为封面
     session.add_all(_create_images(record.id, payload.images))
     await session.flush()
-    return record.id
 
 
 async def list_meal_records(

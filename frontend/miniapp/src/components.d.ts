@@ -20,6 +20,7 @@ declare module 'vue' {
     WdIcon: typeof import('@wot-ui/ui/components/wd-icon/wd-icon.vue')['default']
     WdLoading: typeof import('@wot-ui/ui/components/wd-loading/wd-loading.vue')['default']
     WdLoadmore: typeof import('@wot-ui/ui/components/wd-loadmore/wd-loadmore.vue')['default']
+    WdNavbar: typeof import('@wot-ui/ui/components/wd-navbar/wd-navbar.vue')['default']
     WdPopup: typeof import('@wot-ui/ui/components/wd-popup/wd-popup.vue')['default']
     WdToast: typeof import('@wot-ui/ui/components/wd-toast/wd-toast.vue')['default']
   }

@@ -17,7 +17,8 @@ const emit = defineEmits<{
 
 <template>
   <view class="min-h-screen bg-[#fcf9f6] pb-8">
-    <AppTopBar :show-back="!shared" :edit="!shared" :more="!shared" close @edit="emit('edit')" @more="emit('more')" />
+    <!-- 分享预览没有返回入口，保留关闭按钮；普通详情页避免与返回按钮重复。 -->
+    <AppTopBar :show-back="!shared" :edit="!shared" :more="!shared" :close="shared" @edit="emit('edit')" @more="emit('more')" />
 
     <view class="mx-auto mt-3 w-[280px] rotate-1 bg-white p-3 pb-8 shadow-[0_5px_12px_rgba(0,0,0,0.12)]">
       <image v-if="recipe.cover_url" :src="recipe.cover_url" mode="aspectFill" class="h-[256px] w-full" />
