@@ -26,6 +26,233 @@ from src.rustfs.url import build_public_file_url
 from src.utils.datetime import get_date_range, get_month_range
 
 
+async def create_meal_record(
+    payload: MealRecordCreate,
+    user_id: UUID,
+    session: AsyncSession,
+) -> None:
+    """
+    创建当前用户的饮食记录及其图片。
+
+    :param payload: 饮食记录创建参数
+    :param user_id: 当前用户 ID
+    :param session: 数据库会话
+    :return: 无返回值
+    """
+
+    # 1. 校验饮食来源与关联店铺、菜谱的关系及数据归属
+    await _validate_relations(payload, user_id, session)
+
+    # 2. 创建饮食记录，并刷新数据库生成的记录 ID
+    record = MealRecord(
+        user_id=str(user_id),
+        dish_name=payload.dish_name,
+        eaten_at=payload.eaten_at,
+        source_type=payload.source_type,
+        store_id=str(payload.store_id) if payload.store_id is not None else None,
+        recipe_id=str(payload.recipe_id) if payload.recipe_id is not None else None,
+        note=payload.note,
+    )
+    session.add(record)
+    await session.flush()
+
+    # 3. 按请求顺序创建图片，首张图片作为封面
+    session.add_all(_create_images(record.id, payload.images))
+    await session.flush()
+
+
+async def list_meal_records(
+    page: PageRequest,
+    user_id: UUID,
+    session: AsyncSession,
+    target_date: date | None = None,
+) -> PageResult[MealRecordListItemResponse]:
+    """
+    分页查询当前用户的饮食记录。
+
+    :param page: 分页及排序参数
+    :param user_id: 当前用户 ID
+    :param session: 数据库会话
+    :param target_date: 需要查询的日期，为空时查询全部记录
+    :return: 饮食记录分页数据
+    """
+
+    # 1. 构建当前用户及可选日期范围的查询条件
+    records_statement = select(MealRecord).where(MealRecord.user_id == str(user_id))
+    count_statement = (
+        select(func.count()).select_from(MealRecord).where(MealRecord.user_id == str(user_id))
+    )
+    if target_date is not None:
+        start_at, end_at = get_date_range(target_date)
+        records_statement = records_statement.where(
+            MealRecord.eaten_at >= start_at,
+            MealRecord.eaten_at < end_at,
+        )
+        count_statement = count_statement.where(
+            MealRecord.eaten_at >= start_at,
+            MealRecord.eaten_at < end_at,
+        )
+
+    # 2. 统计符合条件的饮食记录总数
+    total = await session.scalar(count_statement)
+
+    # 3. 按分页和排序参数查询当前页记录
+    records = (
+        await session.scalars(
+            records_statement.order_by(
+                *page.to_order_by({"eaten_at": MealRecord.eaten_at}, [MealRecord.eaten_at.desc()])
+            )
+            .offset(page.offset)
+            .limit(page.page_size)
+        )
+    ).all()
+
+    # 4. 批量查询当前页封面图片，避免返回首页不需要的全部图片
+    cover_images = await _get_cover_images([record.id for record in records], session)
+
+    # 5. 组装轻量列表响应和分页信息
+    items = [_to_list_item_response(record, cover_images.get(record.id)) for record in records]
+    return PageResult.of(page, total or 0, items)
+
+
+async def get_meal_record_calendar(
+    month: str,
+    user_id: UUID,
+    session: AsyncSession,
+) -> MealRecordCalendarResponse:
+    """
+    查询当前用户某个月份的饮食记录日历摘要。
+
+    :param month: 月份，格式为 YYYY-MM
+    :param user_id: 当前用户 ID
+    :param session: 数据库会话
+    :return: 月份统计及有记录日期的数量和封面
+    """
+
+    # 1. 按月份范围查询记录，并按进食时间倒序确定每日封面优先级
+    start_at, end_at = get_month_range(month)
+    record_rows = (
+        await session.execute(
+            select(MealRecord.id, MealRecord.eaten_at)
+            .where(
+                MealRecord.user_id == str(user_id),
+                MealRecord.eaten_at >= start_at,
+                MealRecord.eaten_at < end_at,
+            )
+            .order_by(MealRecord.eaten_at.desc(), MealRecord.created_at.desc())
+        )
+    ).all()
+
+    # 2. 批量查询月份内所有记录的封面图片
+    cover_images = await _get_cover_images([record_id for record_id, _ in record_rows], session)
+
+    # 3. 汇总每日记录数，并取当天最新一条带图片记录的封面
+    day_counts: dict[date, int] = {}
+    day_cover_urls: dict[date, str] = {}
+    for record_id, eaten_at in record_rows:
+        record_date = eaten_at.date()
+        day_counts[record_date] = day_counts.get(record_date, 0) + 1
+        cover_image = cover_images.get(record_id)
+        if record_date not in day_cover_urls and cover_image is not None:
+            day_cover_urls[record_date] = build_public_file_url(cover_image.original_object_key)
+
+    # 4. 按日期升序组装月历响应
+    days = [
+        MealRecordCalendarDayResponse(
+            date=record_date,
+            record_count=day_counts[record_date],
+            cover_url=day_cover_urls.get(record_date),
+        )
+        for record_date in sorted(day_counts)
+    ]
+    return MealRecordCalendarResponse(
+        month=month,
+        total=len(record_rows),
+        recorded_days=len(days),
+        days=days,
+    )
+
+
+async def get_meal_record(
+    record_id: UUID,
+    user_id: UUID,
+    session: AsyncSession,
+) -> MealRecordResponse:
+    """
+    查询当前用户的单条饮食记录详情。
+
+    :param record_id: 饮食记录 ID
+    :param user_id: 当前用户 ID
+    :param session: 数据库会话
+    :return: 饮食记录详情
+    """
+
+    # 1. 按记录 ID 和当前用户查询记录，避免访问其他用户的数据
+    record = await _get_owned_record(record_id, user_id, session)
+
+    # 2. 查询记录图片并组装详情响应
+    images = (await _get_record_images([record.id], session))[record.id]
+    return _to_record_response(record, images)
+
+
+async def update_meal_record(
+    record_id: UUID,
+    payload: MealRecordUpdate,
+    user_id: UUID,
+    session: AsyncSession,
+) -> None:
+    """
+    更新当前用户的饮食记录及其图片。
+
+    :param record_id: 饮食记录 ID
+    :param payload: 饮食记录更新参数
+    :param user_id: 当前用户 ID
+    :param session: 数据库会话
+    :return: 无返回值
+    """
+
+    # 1. 查询当前用户的记录，并校验更新后的关联关系
+    record = await _get_owned_record(record_id, user_id, session)
+    await _validate_relations(payload, user_id, session)
+
+    # 2. 更新饮食记录的基础字段
+    record.dish_name = payload.dish_name
+    record.eaten_at = payload.eaten_at
+    record.source_type = payload.source_type
+    record.store_id = str(payload.store_id) if payload.store_id is not None else None
+    record.recipe_id = str(payload.recipe_id) if payload.recipe_id is not None else None
+    record.note = payload.note
+
+    # 3. 软删除原图片并按请求顺序创建新图片
+    await _replace_images(record.id, payload.images, session)
+    await session.flush()
+
+
+async def delete_meal_record(record_id: UUID, user_id: UUID, session: AsyncSession) -> None:
+    """
+    软删除当前用户的饮食记录及其图片。
+
+    :param record_id: 饮食记录 ID
+    :param user_id: 当前用户 ID
+    :param session: 数据库会话
+    :return: 无返回值
+    """
+
+    # 1. 按记录 ID 和当前用户批量软删除记录
+    deleted_count = await MealRecord.soft_delete_by(
+        session,
+        id=str(record_id),
+        user_id=str(user_id),
+    )
+
+    # 2. 未更新任何记录时，统一按记录不存在处理，避免泄露他人数据
+    if deleted_count == 0:
+        raise BusinessException(ResultCodeEnum.NOT_FOUND_ERROR, "饮食记录不存在")
+
+    # 3. 批量软删除关联图片
+    await MealRecordImage.soft_delete_by(session, meal_record_id=str(record_id))
+
+
 async def _validate_relations(
     payload: MealRecordCreate | MealRecordUpdate,
     user_id: UUID,
@@ -258,230 +485,3 @@ async def _get_cover_images(
         )
     ).all()
     return {image.meal_record_id: image for image in images}
-
-
-async def create_meal_record(
-    payload: MealRecordCreate,
-    user_id: UUID,
-    session: AsyncSession,
-) -> None:
-    """
-    创建当前用户的饮食记录及其图片。
-
-    :param payload: 饮食记录创建参数
-    :param user_id: 当前用户 ID
-    :param session: 数据库会话
-    :return: 无返回值
-    """
-
-    # 1. 校验饮食来源与关联店铺、菜谱的关系及数据归属
-    await _validate_relations(payload, user_id, session)
-
-    # 2. 创建饮食记录，并刷新数据库生成的记录 ID
-    record = MealRecord(
-        user_id=str(user_id),
-        dish_name=payload.dish_name,
-        eaten_at=payload.eaten_at,
-        source_type=payload.source_type,
-        store_id=str(payload.store_id) if payload.store_id is not None else None,
-        recipe_id=str(payload.recipe_id) if payload.recipe_id is not None else None,
-        note=payload.note,
-    )
-    session.add(record)
-    await session.flush()
-
-    # 3. 按请求顺序创建图片，首张图片作为封面
-    session.add_all(_create_images(record.id, payload.images))
-    await session.flush()
-
-
-async def list_meal_records(
-    page: PageRequest,
-    user_id: UUID,
-    session: AsyncSession,
-    target_date: date | None = None,
-) -> PageResult[MealRecordListItemResponse]:
-    """
-    分页查询当前用户的饮食记录。
-
-    :param page: 分页及排序参数
-    :param user_id: 当前用户 ID
-    :param session: 数据库会话
-    :param target_date: 需要查询的日期，为空时查询全部记录
-    :return: 饮食记录分页数据
-    """
-
-    # 1. 构建当前用户及可选日期范围的查询条件
-    records_statement = select(MealRecord).where(MealRecord.user_id == str(user_id))
-    count_statement = (
-        select(func.count()).select_from(MealRecord).where(MealRecord.user_id == str(user_id))
-    )
-    if target_date is not None:
-        start_at, end_at = get_date_range(target_date)
-        records_statement = records_statement.where(
-            MealRecord.eaten_at >= start_at,
-            MealRecord.eaten_at < end_at,
-        )
-        count_statement = count_statement.where(
-            MealRecord.eaten_at >= start_at,
-            MealRecord.eaten_at < end_at,
-        )
-
-    # 2. 统计符合条件的饮食记录总数
-    total = await session.scalar(count_statement)
-
-    # 3. 按分页和排序参数查询当前页记录
-    records = (
-        await session.scalars(
-            records_statement.order_by(
-                *page.to_order_by({"eaten_at": MealRecord.eaten_at}, [MealRecord.eaten_at.desc()])
-            )
-            .offset(page.offset)
-            .limit(page.page_size)
-        )
-    ).all()
-
-    # 4. 批量查询当前页封面图片，避免返回首页不需要的全部图片
-    cover_images = await _get_cover_images([record.id for record in records], session)
-
-    # 5. 组装轻量列表响应和分页信息
-    items = [_to_list_item_response(record, cover_images.get(record.id)) for record in records]
-    return PageResult.of(page, total or 0, items)
-
-
-async def get_meal_record_calendar(
-    month: str,
-    user_id: UUID,
-    session: AsyncSession,
-) -> MealRecordCalendarResponse:
-    """
-    查询当前用户某个月份的饮食记录日历摘要。
-
-    :param month: 月份，格式为 YYYY-MM
-    :param user_id: 当前用户 ID
-    :param session: 数据库会话
-    :return: 月份统计及有记录日期的数量和封面
-    """
-
-    # 1. 按月份范围查询记录，并按进食时间倒序确定每日封面优先级
-    start_at, end_at = get_month_range(month)
-    record_rows = (
-        await session.execute(
-            select(MealRecord.id, MealRecord.eaten_at)
-            .where(
-                MealRecord.user_id == str(user_id),
-                MealRecord.eaten_at >= start_at,
-                MealRecord.eaten_at < end_at,
-            )
-            .order_by(MealRecord.eaten_at.desc(), MealRecord.created_at.desc())
-        )
-    ).all()
-
-    # 2. 批量查询月份内所有记录的封面图片
-    cover_images = await _get_cover_images([record_id for record_id, _ in record_rows], session)
-
-    # 3. 汇总每日记录数，并取当天最新一条带图片记录的封面
-    day_counts: dict[date, int] = {}
-    day_cover_urls: dict[date, str] = {}
-    for record_id, eaten_at in record_rows:
-        record_date = eaten_at.date()
-        day_counts[record_date] = day_counts.get(record_date, 0) + 1
-        cover_image = cover_images.get(record_id)
-        if record_date not in day_cover_urls and cover_image is not None:
-            day_cover_urls[record_date] = build_public_file_url(cover_image.original_object_key)
-
-    # 4. 按日期升序组装月历响应
-    days = [
-        MealRecordCalendarDayResponse(
-            date=record_date,
-            record_count=day_counts[record_date],
-            cover_url=day_cover_urls.get(record_date),
-        )
-        for record_date in sorted(day_counts)
-    ]
-    return MealRecordCalendarResponse(
-        month=month,
-        total=len(record_rows),
-        recorded_days=len(days),
-        days=days,
-    )
-
-
-async def get_meal_record(
-    record_id: UUID,
-    user_id: UUID,
-    session: AsyncSession,
-) -> MealRecordResponse:
-    """
-    查询当前用户的单条饮食记录详情。
-
-    :param record_id: 饮食记录 ID
-    :param user_id: 当前用户 ID
-    :param session: 数据库会话
-    :return: 饮食记录详情
-    """
-
-    # 1. 按记录 ID 和当前用户查询记录，避免访问其他用户的数据
-    record = await _get_owned_record(record_id, user_id, session)
-
-    # 2. 查询记录图片并组装详情响应
-    images = (await _get_record_images([record.id], session))[record.id]
-    return _to_record_response(record, images)
-
-
-async def update_meal_record(
-    record_id: UUID,
-    payload: MealRecordUpdate,
-    user_id: UUID,
-    session: AsyncSession,
-) -> None:
-    """
-    更新当前用户的饮食记录及其图片。
-
-    :param record_id: 饮食记录 ID
-    :param payload: 饮食记录更新参数
-    :param user_id: 当前用户 ID
-    :param session: 数据库会话
-    :return: 无返回值
-    """
-
-    # 1. 查询当前用户的记录，并校验更新后的关联关系
-    record = await _get_owned_record(record_id, user_id, session)
-    await _validate_relations(payload, user_id, session)
-
-    # 2. 更新饮食记录的基础字段
-    record.dish_name = payload.dish_name
-    record.eaten_at = payload.eaten_at
-    record.source_type = payload.source_type
-    record.store_id = str(payload.store_id) if payload.store_id is not None else None
-    record.recipe_id = str(payload.recipe_id) if payload.recipe_id is not None else None
-    record.note = payload.note
-
-    # 3. 软删除原图片并按请求顺序创建新图片
-    await _replace_images(record.id, payload.images, session)
-    await session.flush()
-
-
-async def delete_meal_record(record_id: UUID, user_id: UUID, session: AsyncSession) -> None:
-    """
-    软删除当前用户的饮食记录及其图片。
-
-    :param record_id: 饮食记录 ID
-    :param user_id: 当前用户 ID
-    :param session: 数据库会话
-    :return: 无返回值
-    """
-
-    # 1. 按记录 ID 和当前用户批量软删除记录
-    deleted_count = await MealRecord.soft_delete_by(
-        session,
-        id=str(record_id),
-        user_id=str(user_id),
-    )
-
-    # 2. 未更新任何记录时，统一按记录不存在处理，避免泄露他人数据
-    if deleted_count == 0:
-        raise BusinessException(ResultCodeEnum.NOT_FOUND_ERROR, "饮食记录不存在")
-
-    # 3. 批量软删除关联图片
-    await MealRecordImage.soft_delete_by(session, meal_record_id=str(record_id))
