@@ -2,6 +2,7 @@
 import type { MealRecordCalendarDay, MealRecordListItem } from '@/api/meal-records/type'
 import { mealRecordApi } from '@/api/meal-records'
 import { formatDateParam, formatMonthParam, formatPeriodText, formatTimeText } from '@/utils/date'
+import { getImageTakenAt } from '@/utils/image-exif'
 import { getErrorMessage } from '@/utils/request'
 
 definePage({
@@ -112,16 +113,20 @@ const showSourcePicker = ref(false)
 const chooseRecordImage = (sourceType: 'camera' | 'album') => {
   uni.chooseImage({
     count: 1,
-    sizeType: ['compressed'],
+    // 保留原图 EXIF，上传前仍由统一文件服务压缩。
+    sizeType: ['original'],
     sourceType: [sourceType],
-    success: ({ tempFilePaths }) => {
+    success: async ({ tempFilePaths }) => {
       // 部分 uni-app 平台声明单图结果为字符串，进入编辑页前统一读取完整路径。
       const imagePath = Array.isArray(tempFilePaths) ? tempFilePaths[0] : tempFilePaths
       if (!imagePath)
         return
+      const takenAt = await getImageTakenAt(imagePath)
+      // 现场拍摄的时间就是当前时刻；相册图缺少元数据时交给用户明确选择。
+      const resolvedTakenAt = takenAt ?? (sourceType === 'camera' ? Date.now() : null)
       showSourcePicker.value = false
       uni.navigateTo({
-        url: `/pages/record-edit/index?image=${encodeURIComponent(imagePath)}`,
+        url: `/pages/record-edit/index?image=${encodeURIComponent(imagePath)}${resolvedTakenAt ? `&takenAt=${resolvedTakenAt}` : '&photoTimeMissing=1'}`,
       })
     },
   })
@@ -253,7 +258,7 @@ const openRecordDetail = (recordId: string) => {
 
     <AppBottomNav active="home" />
 
-    <wd-popup v-model="showSourcePicker" position="bottom" :z-index="50" root-portal custom-style="background: transparent; padding: 0 24px calc(env(safe-area-inset-bottom) + 60px);">
+    <wd-popup v-model="showSourcePicker" position="bottom" :z-index="50" root-portal modal-style="background: rgba(28, 28, 26, 0.72); -webkit-backdrop-filter: blur(32px); backdrop-filter: blur(32px);" custom-style="background: transparent; padding: 0 24px calc(env(safe-area-inset-bottom) + 60px);">
       <view class="flex flex-col gap-4 pb-16">
         <button class="m-0 h-[114px] w-full flex items-center border-0 rounded-3xl bg-white px-6 text-left shadow-[0_12px_25px_rgba(0,0,0,0.12)] after:border-0" @click="chooseRecordImage('camera')">
           <view class="mr-6 h-16 w-16 flex items-center justify-center rounded-2xl bg-[#e1e6c2]">

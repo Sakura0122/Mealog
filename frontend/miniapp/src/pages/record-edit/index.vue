@@ -7,6 +7,7 @@ import { mealRecordApi } from '@/api/meal-records'
 import { recipeApi } from '@/api/recipes'
 import { storeApi } from '@/api/stores'
 import { formatDateTimePayload, formatDateTimeText, parseLocalDate } from '@/utils/date'
+import { getImageTakenAt } from '@/utils/image-exif'
 import { getErrorMessage } from '@/utils/request'
 
 definePage({
@@ -29,6 +30,7 @@ const loadError = ref('')
 
 const eatenAt = ref(Date.now())
 const showDatePicker = ref(false)
+const photoTimeMissing = ref(false)
 
 const sourceType = ref<MealSourceType>('SELF_MADE')
 const dishName = ref('')
@@ -174,18 +176,38 @@ const chooseImages = (sourceTypeOption?: 'camera' | 'album') => {
 
   uni.chooseImage({
     count: remaining,
-    sizeType: ['compressed'],
+    // 首张原图用于读取拍摄时间，上传前仍由统一文件服务压缩。
+    sizeType: ['original'],
     sourceType: sourceTypeOption ? [sourceTypeOption] : ['album', 'camera'],
-    success: ({ tempFilePaths }) => {
+    success: async ({ tempFilePaths }) => {
       // 部分 uni-app 平台声明单图结果为字符串，提交前统一成路径数组。
       const paths = Array.isArray(tempFilePaths) ? tempFilePaths : [tempFilePaths]
+      const shouldUseTakenAt = !recordId.value && images.value.length === 0 && Boolean(paths[0])
+      const takenAt = shouldUseTakenAt ? await getImageTakenAt(paths[0]) : null
       images.value.push(...paths.map(path => ({ previewUrl: path, pendingPath: path })))
+      if (shouldUseTakenAt) {
+        if (takenAt !== null) {
+          eatenAt.value = takenAt
+          photoTimeMissing.value = false
+        }
+        else if (sourceTypeOption === 'camera') {
+          eatenAt.value = Date.now()
+          photoTimeMissing.value = false
+        }
+        else {
+          // 相册图可能被转存或清除元数据，不能把临时文件生成时间冒充拍摄时间。
+          photoTimeMissing.value = true
+          useGlobalToast().warning('照片不含拍摄时间，请手动选择')
+        }
+      }
     },
   })
 }
 
 const removeImage = (index: number) => {
   images.value.splice(index, 1)
+  if (images.value.length === 0)
+    photoTimeMissing.value = false
 }
 
 const previewImages = (current: string) => {
@@ -243,7 +265,23 @@ onLoad((options) => {
     const decodedPath = decodeURIComponent(imagePath)
     images.value.push({ previewUrl: decodedPath, pendingPath: decodedPath })
   }
+
+  const takenAt = Number(options?.takenAt)
+  if (!id && Number.isFinite(takenAt) && takenAt > 0)
+    eatenAt.value = takenAt
+  photoTimeMissing.value = !id && options?.photoTimeMissing === '1'
 })
+
+const openDatePicker = () => {
+  // 收起输入态内容，避免菜谱建议层和键盘盖住时间选择器。
+  showSuggestions.value = false
+  uni.hideKeyboard()
+  showDatePicker.value = true
+}
+
+const confirmPhotoTime = () => {
+  photoTimeMissing.value = false
+}
 
 const saving = ref(false)
 const uploadImages = async () => {
@@ -264,6 +302,10 @@ const uploadImages = async () => {
 }
 
 const saveRecord = async () => {
+  if (photoTimeMissing.value) {
+    useGlobalToast().warning('请选择进食时间')
+    return
+  }
   if (!dishName.value.trim()) {
     useGlobalToast().warning('请输入菜品名称')
     return
@@ -304,7 +346,7 @@ const saveRecord = async () => {
 
 <template>
   <view class="min-h-screen bg-[#fcf9f6] pb-8">
-    <AppTopBar close />
+    <AppTopBar home />
 
     <view v-if="loading" class="h-96 flex items-center justify-center">
       <wd-loading text="加载饮食记录" color="#71836b" />
@@ -318,7 +360,7 @@ const saveRecord = async () => {
     </view>
 
     <template v-else>
-      <view class="mx-auto mt-4 w-[196px] rotate-[-1deg] bg-white p-2 pb-7 shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
+      <view class="relative mx-auto mt-4 w-[196px] rotate-[-1deg] bg-white p-2 pb-7 shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
         <view v-if="images[0]" class="relative h-[180px] w-full overflow-hidden bg-[#e5e3e0]" @click="previewImages(images[0].previewUrl)">
           <image :src="images[0].previewUrl" mode="aspectFill" class="h-full w-full" />
           <button class="absolute right-2 top-2 m-0 h-8 w-8 flex items-center justify-center border-0 rounded-full bg-black/50 p-0 after:border-0" aria-label="移除图片" @click.stop="removeImage(0)">
@@ -332,6 +374,12 @@ const saveRecord = async () => {
           </text>
         </button>
         <view class="mx-auto mt-2 h-1 w-12 rounded-full bg-[#dfddda]" />
+        <button v-if="images.length && images.length < 9" class="absolute bottom-0 right-[-14px] m-0 h-11 w-11 flex items-center justify-center border-0 rounded-full bg-[#e1e6c2] p-0 shadow-[0_3px_8px_rgba(82,99,76,0.16)] after:border-0" aria-label="继续添加图片" @click="chooseImages()">
+          <wd-icon name="camera" size="23px" color="#5f6848" />
+          <view class="absolute right-0 top-0 h-3.5 w-3.5 flex items-center justify-center rounded-full bg-[#f7f5ef]">
+            <wd-icon name="plus" size="10px" color="#5f6848" />
+          </view>
+        </button>
       </view>
 
       <view v-if="images.length" class="mx-5 mt-4 flex gap-2 overflow-x-auto">
@@ -341,16 +389,13 @@ const saveRecord = async () => {
             <wd-icon name="close" size="11px" color="#ffffff" />
           </button>
         </view>
-        <button v-if="images.length < 9" class="m-0 h-14 w-14 flex shrink-0 items-center justify-center border border-[#d8d7d2] rounded-md bg-white p-0 after:border-0" aria-label="继续添加图片" @click="chooseImages()">
-          <wd-icon name="plus" size="22px" color="#596455" />
-        </button>
       </view>
 
       <view class="mx-5 mt-4 overflow-visible border border-[#e5e2df] rounded-3xl bg-white shadow-[0_8px_20px_rgba(0,0,0,0.04)]">
-        <button class="m-0 h-[57px] w-full flex items-center border-0 border-b border-[#ebe8e4] bg-transparent px-5 text-left after:border-0" @click="showDatePicker = true">
+        <button class="m-0 h-[57px] w-full flex items-center border-0 border-b border-[#ebe8e4] bg-transparent px-5 text-left after:border-0" @click="openDatePicker">
           <wd-icon name="calendar-line" size="19px" color="#5c6949" />
-          <text class="ml-4 text-base text-[#1c1c1a]">
-            {{ formatDateTimeText(eatenAt) }}
+          <text class="ml-4 text-base" :class="photoTimeMissing ? 'text-[#a14444]' : 'text-[#1c1c1a]'">
+            {{ photoTimeMissing ? '请选择进食时间' : formatDateTimeText(eatenAt) }}
           </text>
           <wd-icon name="arrow-right" size="15px" color="#c6c8c3" custom-class="ml-auto" />
         </button>
@@ -424,7 +469,7 @@ const saveRecord = async () => {
       </button>
     </template>
 
-    <wd-datetime-picker v-model="eatenAt" v-model:visible="showDatePicker" type="datetime" title="选择进食时间" root-portal />
+    <wd-datetime-picker v-model="eatenAt" v-model:visible="showDatePicker" :z-index="100" type="datetime" title="选择进食时间" root-portal @confirm="confirmPhotoTime" />
 
     <wd-popup v-model="showStorePicker" position="bottom" round safe-area-inset-bottom root-portal custom-style="max-height: 75vh; background: #fcf9f6;">
       <view class="px-5 pb-5 pt-4">

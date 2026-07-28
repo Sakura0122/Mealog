@@ -2,11 +2,13 @@
 withDefaults(defineProps<{
   close?: boolean
   edit?: boolean
+  home?: boolean
   more?: boolean
   showBack?: boolean
 }>(), {
   close: false,
   edit: false,
+  home: false,
   more: false,
   showBack: true,
 })
@@ -23,6 +25,10 @@ const goBack = () => {
   })
 }
 
+const goHome = () => {
+  uni.reLaunch({ url: '/pages/index/index' })
+}
+
 const rightInset = ref(0)
 // 微信原生胶囊位于导航栏右侧，操作按钮需要精确避开其占用区域。
 // #ifdef MP-WEIXIN
@@ -36,7 +42,10 @@ rightInset.value = systemInfo.windowWidth - menuButtonRect.left
   <!-- 统一使用组件库计算状态栏和导航栏高度，避免自定义导航内容进入系统区域。 -->
   <wd-navbar safe-area-inset-top custom-style="background: transparent;">
     <template #left>
-      <button v-if="showBack" class="m-0 h-8 w-8 flex items-center justify-center border-0 bg-transparent p-0 after:border-0" aria-label="返回" @click="goBack">
+      <button v-if="home" class="m-0 h-8 w-8 flex items-center justify-center border-0 bg-transparent p-0 after:border-0" aria-label="返回首页" @click="goHome">
+        <wd-icon name="home" size="22px" color="#1c1c1a" />
+      </button>
+      <button v-else-if="showBack" class="m-0 h-8 w-8 flex items-center justify-center border-0 bg-transparent p-0 after:border-0" aria-label="返回" @click="goBack">
         <wd-icon name="arrow-left" size="22px" color="#1c1c1a" />
       </button>
     </template>
