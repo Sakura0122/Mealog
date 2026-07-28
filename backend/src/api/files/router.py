@@ -5,6 +5,7 @@ from fastapi import APIRouter, File, Form, UploadFile
 from src.api.files.schema import UploadFileResponse
 from src.api.files.service import UploadType, upload_file
 from src.common.result import Result
+from src.core.dependencies import CurrentUserIdDep
 from src.rustfs.url import build_public_file_url
 
 router = APIRouter(prefix="/files", tags=["文件"])
@@ -17,13 +18,14 @@ router = APIRouter(prefix="/files", tags=["文件"])
     response_model=Result[UploadFileResponse],
 )
 def upload_user_file(
+    user_id: CurrentUserIdDep,
     file: Annotated[UploadFile, File(description="需要上传的文件")],
     upload_type: Annotated[
         UploadType,
         Form(alias="type", description="文件分类：avatar、images 或 files"),
     ],
 ) -> Result[UploadFileResponse]:
-    file_info = upload_file(file, upload_type)
+    file_info = upload_file(file, upload_type, user_id)
     return Result.success(
         UploadFileResponse(
             object_key=file_info.object_key,

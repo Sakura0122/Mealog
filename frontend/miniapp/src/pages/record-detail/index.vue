@@ -39,10 +39,6 @@ const loadRecord = async () => {
 }
 onShow(loadRecord)
 
-const goBack = () => {
-  uni.navigateBack()
-}
-
 const editRecord = () => {
   uni.navigateTo({ url: `/pages/record-edit/index?id=${recordId.value}` })
 }
@@ -92,17 +88,8 @@ const confirmDelete = () => {
 
 <template>
   <view class="min-h-screen bg-[#fcf9f6] pb-8">
-    <view class="h-16 flex items-center px-5">
-      <button class="m-0 h-8 w-8 flex items-center justify-center border-0 bg-transparent p-0 after:border-0" aria-label="返回" @click="goBack">
-        <wd-icon name="arrow-left" size="22px" color="#1c1c1a" />
-      </button>
-      <button v-if="record" class="ml-auto mr-3 h-8 w-8 flex items-center justify-center border-0 bg-transparent p-0 after:border-0" aria-label="编辑" @click="editRecord">
-        <wd-icon name="edit" size="21px" color="#1c1c1a" />
-      </button>
-      <button v-if="record" class="m-0 h-8 w-8 flex items-center justify-center border-0 bg-transparent p-0 after:border-0" aria-label="更多" @click="showActions = true">
-        <wd-icon name="more-vertical" size="21px" color="#5d5d5b" />
-      </button>
-    </view>
+    <!-- 头部只保留返回和更多操作，编辑统一通过页面底部主按钮进入。 -->
+    <AppTopBar :more="Boolean(record)" @more="showActions = true" />
 
     <view v-if="loading && !record" class="h-96 flex items-center justify-center">
       <wd-loading text="加载饮食记录" color="#71836b" />
