@@ -24,6 +24,16 @@ interface EditableImage {
   pendingPath?: string
 }
 
+interface SelectedRecordImagesPayload {
+  imagePaths: string[]
+  takenAt: number | null
+  photoTimeMissing: boolean
+}
+
+const pageInstance = getCurrentInstance()?.proxy as {
+  getOpenerEventChannel?: () => UniNamespace.EventChannel
+} | null
+
 const recordId = ref('')
 const loading = ref(false)
 const loadError = ref('')
@@ -270,6 +280,15 @@ onLoad((options) => {
   if (!id && Number.isFinite(takenAt) && takenAt > 0)
     eatenAt.value = takenAt
   photoTimeMissing.value = !id && options?.photoTimeMissing === '1'
+
+  const eventChannel = pageInstance?.getOpenerEventChannel?.()
+  eventChannel?.once('selectedRecordImages', (payload: SelectedRecordImagesPayload) => {
+    // 首页最多传入 9 张临时图片，新增页沿用现有图片列表和上传流程。
+    images.value.push(...payload.imagePaths.map(path => ({ previewUrl: path, pendingPath: path })))
+    if (payload.takenAt !== null)
+      eatenAt.value = payload.takenAt
+    photoTimeMissing.value = payload.photoTimeMissing
+  })
 })
 
 const openDatePicker = () => {

@@ -84,7 +84,15 @@ const loadHome = async () => {
   }
 }
 
-onShow(loadHome)
+const skipNextHomeLoad = ref(false)
+onShow(() => {
+  // 原生相册或相机返回也会触发 onShow，此时首页数据没有变化，无需重复请求。
+  if (skipNextHomeLoad.value) {
+    skipNextHomeLoad.value = false
+    return
+  }
+  loadHome()
+})
 
 const changeMonth = (offset: number) => {
   const nextMonth = new Date(monthDate.value.getFullYear(), monthDate.value.getMonth() + offset, 1)
@@ -111,22 +119,31 @@ const selectDate = (cell: CalendarCell) => {
 
 const showSourcePicker = ref(false)
 const chooseRecordImage = (sourceType: 'camera' | 'album') => {
+  skipNextHomeLoad.value = true
   uni.chooseImage({
-    count: 1,
-    // 保留原图 EXIF，上传前仍由统一文件服务压缩。
+    count: 9,
+    // 保留首张原图的 EXIF，上传前仍由统一文件服务压缩。
     sizeType: ['original'],
     sourceType: [sourceType],
     success: async ({ tempFilePaths }) => {
-      // 部分 uni-app 平台声明单图结果为字符串，进入编辑页前统一读取完整路径。
-      const imagePath = Array.isArray(tempFilePaths) ? tempFilePaths[0] : tempFilePaths
-      if (!imagePath)
+      // 部分 uni-app 平台声明单图结果为字符串，进入编辑页前统一成路径数组。
+      const imagePaths = Array.isArray(tempFilePaths) ? tempFilePaths : [tempFilePaths]
+      if (!imagePaths[0])
         return
-      const takenAt = await getImageTakenAt(imagePath)
+      const takenAt = await getImageTakenAt(imagePaths[0])
       // 现场拍摄的时间就是当前时刻；相册图缺少元数据时交给用户明确选择。
       const resolvedTakenAt = takenAt ?? (sourceType === 'camera' ? Date.now() : null)
       showSourcePicker.value = false
       uni.navigateTo({
-        url: `/pages/record-edit/index?image=${encodeURIComponent(imagePath)}${resolvedTakenAt ? `&takenAt=${resolvedTakenAt}` : '&photoTimeMissing=1'}`,
+        url: '/pages/record-edit/index',
+        success: ({ eventChannel }) => {
+          // 临时路径不拼接到 URL，避免多图路径超过页面地址长度限制。
+          eventChannel.emit('selectedRecordImages', {
+            imagePaths,
+            takenAt: resolvedTakenAt,
+            photoTimeMissing: resolvedTakenAt === null,
+          })
+        },
       })
     },
   })
