@@ -97,3 +97,19 @@ class RecipeResponse(BaseModel):
     usage_count: int = Field(description="关联该菜谱的有效饮食记录数量")
     created_at: datetime = Field(description="菜谱创建时间")
     updated_at: datetime = Field(description="菜谱最后更新时间")
+
+
+class RecipeShareResponse(BaseModel):
+    """分享菜谱公开详情响应。"""
+
+    id: str = Field(description="原菜谱 ID")
+    name: str = Field(description="菜谱名称")
+    cover_url: str | None = Field(description="菜谱封面公开访问地址，无封面时为空")
+    ingredients: list[str] = Field(description="按展示顺序排列的食材名称")
+    steps: str | None = Field(description="菜谱制作步骤，未填写时为空")
+
+
+class RecipeSavedResponse(BaseModel):
+    """保存分享菜谱响应。"""
+
+    id: str = Field(description="保存后生成的菜谱 ID")

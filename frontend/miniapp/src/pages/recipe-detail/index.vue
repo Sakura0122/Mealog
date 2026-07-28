@@ -75,8 +75,22 @@ const confirmDelete = () => {
   })
 }
 
-const shareRecipe = () => {
-  uni.navigateTo({ url: `/pages/recipe-share/index?id=${recipeId.value}` })
+const sharing = ref(false)
+const shareRecipe = async () => {
+  if (sharing.value)
+    return
+
+  sharing.value = true
+  try {
+    await recipeApi.share(recipeId.value)
+    uni.navigateTo({ url: `/pages/recipe-share/index?id=${recipeId.value}&owner=1` })
+  }
+  catch (error) {
+    useGlobalToast().error(getErrorMessage(error))
+  }
+  finally {
+    sharing.value = false
+  }
 }
 </script>
 
@@ -104,6 +118,11 @@ const shareRecipe = () => {
     <view v-if="deleting" class="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <view class="rounded-lg bg-white px-6 py-4 shadow-lg">
         <wd-loading text="正在删除" color="#71836b" />
+      </view>
+    </view>
+    <view v-if="sharing" class="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
+      <view class="rounded-lg bg-white px-6 py-4 shadow-lg">
+        <wd-loading text="正在生成分享" color="#71836b" />
       </view>
     </view>
   </template>

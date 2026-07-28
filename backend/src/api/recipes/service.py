@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from typing import cast
 from uuid import UUID
 
@@ -10,6 +11,8 @@ from src.api.recipes.schema import (
     RecipeCreate,
     RecipeListItemResponse,
     RecipeResponse,
+    RecipeSavedResponse,
+    RecipeShareResponse,
     RecipeStatus,
     RecipeUpdate,
 )
@@ -86,6 +89,64 @@ async def get_recipe(recipe_id: UUID, user_id: UUID, session: AsyncSession) -> R
     return _to_recipe_response(recipe, ingredients, usage_count or 0)
 
 
+async def share_recipe(recipe_id: UUID, user_id: UUID, session: AsyncSession) -> None:
+    """为当前用户的菜谱刷新分享有效期。"""
+
+    recipe = await _get_owned_recipe(recipe_id, user_id, session)
+    # 每次主动分享都刷新有效期，旧分享路径无需更换即可继续使用。
+    recipe.share_expires_at = datetime.now() + timedelta(days=7)
+    await session.flush()
+
+
+async def get_shared_recipe(recipe_id: UUID, session: AsyncSession) -> RecipeShareResponse:
+    """查询仍在有效期内的分享菜谱。"""
+
+    recipe = await _get_active_shared_recipe(recipe_id, session)
+    ingredients = await _get_ingredients(recipe.id, session)
+    return _to_share_response(recipe, ingredients)
+
+
+async def save_shared_recipe(
+    recipe_id: UUID,
+    user_id: UUID,
+    session: AsyncSession,
+) -> RecipeSavedResponse:
+    """将有效的分享菜谱复制到当前用户的菜谱中。"""
+
+    source = await _get_active_shared_recipe(recipe_id, session)
+    if source.user_id == str(user_id):
+        raise BusinessException(ResultCodeEnum.PARAM_ERROR, "不能保存自己的菜谱")
+
+    existing_copy = await session.scalar(
+        select(Recipe.id).where(
+            Recipe.user_id == str(user_id),
+            Recipe.source_recipe_id == source.id,
+        )
+    )
+    if existing_copy is not None:
+        raise BusinessException(ResultCodeEnum.PARAM_ERROR, "该分享菜谱已保存")
+
+    await _validate_unique_name(source.name, user_id, session)
+    source_ingredients = await _get_ingredients(source.id, session)
+    recipe = Recipe(
+        user_id=str(user_id),
+        source_recipe_id=source.id,
+        name=source.name,
+        cover_object_key=source.cover_object_key,
+        steps=source.steps,
+        status=source.status,
+    )
+    session.add(recipe)
+    await session.flush()
+
+    # 保存动作复制当前分享内容，后续原菜谱修改不会影响用户已保存的副本。
+    session.add_all(
+        _create_ingredients(recipe.id, [ingredient.name for ingredient in source_ingredients])
+    )
+    await session.flush()
+    return RecipeSavedResponse(id=recipe.id)
+
+
 async def update_recipe(
     recipe_id: UUID,
     payload: RecipeUpdate,
@@ -145,6 +206,21 @@ async def _get_owned_recipe(
     )
     if recipe is None:
         raise BusinessException(ResultCodeEnum.NOT_FOUND_ERROR, "菜谱不存在")
+    return recipe
+
+
+async def _get_active_shared_recipe(recipe_id: UUID, session: AsyncSession) -> Recipe:
+    """查询未过期的分享菜谱，失效状态统一按不存在处理。"""
+
+    recipe = await session.scalar(
+        select(Recipe).where(
+            Recipe.id == str(recipe_id),
+            Recipe.share_expires_at.is_not(None),
+            Recipe.share_expires_at >= datetime.now(),
+        )
+    )
+    if recipe is None:
+        raise BusinessException(ResultCodeEnum.NOT_FOUND_ERROR, "分享不存在或已过期")
     return recipe
 
 
@@ -290,4 +366,23 @@ def _to_recipe_response(
         usage_count=usage_count,
         created_at=recipe.created_at,
         updated_at=recipe.updated_at,
+    )
+
+
+def _to_share_response(
+    recipe: Recipe,
+    ingredients: list[RecipeIngredient],
+) -> RecipeShareResponse:
+    """将菜谱转换为不包含归属和存储键的公开分享响应。"""
+
+    return RecipeShareResponse(
+        id=recipe.id,
+        name=recipe.name,
+        cover_url=(
+            build_public_file_url(recipe.cover_object_key)
+            if recipe.cover_object_key is not None
+            else None
+        ),
+        ingredients=[ingredient.name for ingredient in ingredients],
+        steps=recipe.steps,
     )

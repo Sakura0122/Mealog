@@ -8,6 +8,8 @@ from src.api.recipes.schema import (
     RecipeCreate,
     RecipeListItemResponse,
     RecipeResponse,
+    RecipeSavedResponse,
+    RecipeShareResponse,
     RecipeStatus,
     RecipeUpdate,
 )
@@ -44,6 +46,33 @@ async def list_recipes(
     return Result.success(res)
 
 
+@router.get(
+    "/shares/{recipe_id}",
+    response_model=Result[RecipeShareResponse],
+    summary="查询分享菜谱详情",
+)
+async def get_shared_recipe(
+    recipe_id: UUID,
+    session: SessionDep,
+) -> Result[RecipeShareResponse]:
+    res = await recipe_service.get_shared_recipe(recipe_id, session)
+    return Result.success(res)
+
+
+@router.post(
+    "/shares/{recipe_id}/save",
+    response_model=Result[RecipeSavedResponse],
+    summary="保存分享菜谱",
+)
+async def save_shared_recipe(
+    recipe_id: UUID,
+    user_id: CurrentUserIdDep,
+    session: SessionDep,
+) -> Result[RecipeSavedResponse]:
+    res = await recipe_service.save_shared_recipe(recipe_id, user_id, session)
+    return Result.success(res)
+
+
 @router.get("/{recipe_id}", response_model=Result[RecipeResponse], summary="查询菜谱详情")
 async def get_recipe(
     recipe_id: UUID,
@@ -52,6 +81,16 @@ async def get_recipe(
 ) -> Result[RecipeResponse]:
     res = await recipe_service.get_recipe(recipe_id, user_id, session)
     return Result.success(res)
+
+
+@router.post("/{recipe_id}/share", response_model=Result[None], summary="生成菜谱分享")
+async def share_recipe(
+    recipe_id: UUID,
+    user_id: CurrentUserIdDep,
+    session: SessionDep,
+) -> Result[None]:
+    await recipe_service.share_recipe(recipe_id, user_id, session)
+    return Result.success()
 
 
 @router.put("/{recipe_id}", response_model=Result[None], summary="更新菜谱")

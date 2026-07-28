@@ -1,4 +1,4 @@
-import type { RecipeDetail, RecipeListParams, RecipePage, RecipePayload } from './type'
+import type { RecipeDetail, RecipeListParams, RecipePage, RecipePayload, RecipeSavedResult, RecipeShareDetail } from './type'
 import { apiRequest } from '@/utils/request'
 
 export const recipeApi = {
@@ -16,5 +16,14 @@ export const recipeApi = {
   },
   remove(recipeId: string) {
     return apiRequest<void>({ url: `/recipes/${recipeId}`, method: 'DELETE' })
+  },
+  share(recipeId: string) {
+    return apiRequest<void>({ url: `/recipes/${recipeId}/share`, method: 'POST' })
+  },
+  sharedDetail(recipeId: string) {
+    return apiRequest<RecipeShareDetail>({ url: `/recipes/shares/${recipeId}` })
+  },
+  saveShared(recipeId: string) {
+    return apiRequest<RecipeSavedResult>({ url: `/recipes/shares/${recipeId}/save`, method: 'POST' })
   },
 }

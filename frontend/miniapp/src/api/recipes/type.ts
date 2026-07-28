@@ -25,6 +25,18 @@ export interface RecipeDetail extends RecipePayload {
   updated_at: string
 }
 
+export interface RecipeShareDetail {
+  id: string
+  name: string
+  cover_url: string | null
+  ingredients: string[]
+  steps: string | null
+}
+
+export interface RecipeSavedResult {
+  id: string
+}
+
 export interface RecipePage {
   total: number
   page_count: number

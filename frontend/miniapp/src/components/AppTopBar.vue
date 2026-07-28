@@ -17,7 +17,10 @@ const emit = defineEmits<{
 }>()
 
 const goBack = () => {
-  uni.navigateBack()
+  uni.navigateBack({
+    // 分享卡片冷启动时没有上一页，关闭后应回到应用首页。
+    fail: () => uni.reLaunch({ url: '/pages/index/index' }),
+  })
 }
 
 const rightInset = ref(0)

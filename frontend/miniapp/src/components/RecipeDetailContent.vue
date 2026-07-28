@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import type { RecipeDetail } from '@/api/recipes/type'
+import type { RecipeShareDetail } from '@/api/recipes/type'
 
 withDefaults(defineProps<{
-  recipe: RecipeDetail
+  recipe: RecipeShareDetail
   shared?: boolean
+  actionLabel?: string
+  actionOpenType?: 'share'
 }>(), {
   shared: false,
+  actionLabel: '',
+  actionOpenType: undefined,
 })
 
 const emit = defineEmits<{
@@ -62,8 +66,8 @@ const emit = defineEmits<{
       </view>
     </view>
 
-    <button class="mx-5 mt-6 h-14 flex items-center justify-center border-0 rounded-full text-base font-medium shadow-[0_6px_12px_rgba(0,0,0,0.1)] after:border-0" :class="shared ? 'bg-[#d5e8cb] text-[#24331f]' : 'bg-[#ffd29a] text-[#343021]'" @click="emit('action')">
-      {{ shared ? '保存至我的菜谱' : '分享我的菜谱' }}
+    <button :open-type="actionOpenType" class="mx-5 mt-6 h-14 flex items-center justify-center border-0 rounded-full text-base font-medium shadow-[0_6px_12px_rgba(0,0,0,0.1)] after:border-0" :class="shared ? 'bg-[#d5e8cb] text-[#24331f]' : 'bg-[#ffd29a] text-[#343021]'" @click="emit('action')">
+      {{ actionLabel || (shared ? '保存至我的菜谱' : '分享我的菜谱') }}
     </button>
   </view>
 </template>
