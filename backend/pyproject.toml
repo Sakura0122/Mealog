@@ -7,6 +7,7 @@ requires-python = ">=3.14"
 dependencies = [
     "asyncmy>=0.2.11",
     "boto3>=1.43.53",
+    "cryptography>=49.0.0",
     "fastapi>=0.139.2",
     "httpx>=0.28.1",
     "loguru>=0.7.3",
