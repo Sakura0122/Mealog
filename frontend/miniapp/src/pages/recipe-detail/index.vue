@@ -75,23 +75,22 @@ const confirmDelete = () => {
   })
 }
 
-const sharing = ref(false)
-const shareRecipe = async () => {
-  if (sharing.value)
-    return
-
-  sharing.value = true
+onShareAppMessage(async () => {
   try {
     await recipeApi.share(recipeId.value)
-    uni.navigateTo({ url: `/pages/recipe-share/index?id=${recipeId.value}&owner=1` })
   }
   catch (error) {
     useGlobalToast().error(getErrorMessage(error))
+    throw error
   }
-  finally {
-    sharing.value = false
+
+  // 微信会等待 Promise 完成，确保接收方打开链接前分享有效期已经生成。
+  return {
+    title: recipe.value ? `${recipe.value.name} - Mealog 菜谱` : 'Mealog 菜谱',
+    path: `/pages/recipe-share/index?id=${recipeId.value}`,
+    imageUrl: recipe.value?.cover_url ?? undefined,
   }
-}
+})
 </script>
 
 <template>
@@ -113,16 +112,11 @@ const shareRecipe = async () => {
   </view>
 
   <template v-else-if="recipe">
-    <RecipeDetailContent :recipe="recipe" @edit="editRecipe" @more="showActions = true" @action="shareRecipe" />
+    <RecipeDetailContent :recipe="recipe" action-open-type="share" @edit="editRecipe" @more="showActions = true" />
     <wd-action-sheet v-model="showActions" :actions="actions" cancel-text="取消" root-portal @select="confirmDelete" />
     <view v-if="deleting" class="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <view class="rounded-lg bg-white px-6 py-4 shadow-lg">
         <wd-loading text="正在删除" color="#71836b" />
-      </view>
-    </view>
-    <view v-if="sharing" class="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
-      <view class="rounded-lg bg-white px-6 py-4 shadow-lg">
-        <wd-loading text="正在生成分享" color="#71836b" />
       </view>
     </view>
   </template>

@@ -11,11 +11,9 @@ definePage({
 })
 
 const recipeId = ref('')
-const ownerPreview = ref(false)
 const loadError = ref('')
 onLoad((options) => {
   recipeId.value = typeof options?.id === 'string' ? options.id : ''
-  ownerPreview.value = options?.owner === '1'
   if (!recipeId.value)
     loadError.value = '缺少分享菜谱 ID'
 })
@@ -42,7 +40,7 @@ onShow(loadRecipe)
 
 const saving = ref(false)
 const saveRecipe = async () => {
-  if (ownerPreview.value || saving.value)
+  if (saving.value)
     return
 
   saving.value = true
@@ -61,7 +59,7 @@ const saveRecipe = async () => {
   }
 }
 
-// 分享路径不携带预览标记，接收方打开后进入可保存状态。
+// 接收方再次转发时沿用同一个公开分享地址。
 onShareAppMessage(() => ({
   title: recipe.value ? `${recipe.value.name} - Mealog 菜谱` : 'Mealog 菜谱',
   path: `/pages/recipe-share/index?id=${recipeId.value}`,
@@ -91,8 +89,7 @@ onShareAppMessage(() => ({
     v-else-if="recipe"
     :recipe="recipe"
     shared
-    :action-label="ownerPreview ? '转发给朋友' : saving ? '保存中' : '保存至我的菜谱'"
-    :action-open-type="ownerPreview ? 'share' : undefined"
+    :action-label="saving ? '保存中' : '保存至我的菜谱'"
     @action="saveRecipe"
   />
 </template>
