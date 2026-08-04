@@ -63,14 +63,6 @@
       }
     },
     {
-      "path": "pages/record-detail/index",
-      "type": "page",
-      "name": "record-detail",
-      "style": {
-        "navigationStyle": "custom"
-      }
-    },
-    {
       "path": "pages/record-edit/index",
       "type": "page",
       "name": "record-edit",

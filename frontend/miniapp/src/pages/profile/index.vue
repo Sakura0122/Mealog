@@ -121,7 +121,6 @@ const openAbout = () => {
           <text class="ml-3 rounded-full bg-[#d5e8cb] px-2 py-1 text-xs text-[#42543d]">
             {{ formatCount(recipeCount) }}
           </text>
-          <wd-icon name="arrow-right" size="18px" color="#7e847b" custom-class="ml-auto" />
         </button>
         <button class="m-0 h-[89px] w-full flex items-center border-0 border-b border-[#e5e2df] bg-transparent px-4 text-left after:border-0" @click="openPrivacy">
           <view class="h-10 w-10 flex items-center justify-center rounded-full bg-[#f8faf7]">
@@ -130,7 +129,6 @@ const openAbout = () => {
           <text class="ml-4 text-base text-[#1c1c1a] font-medium">
             隐私说明
           </text>
-          <wd-icon name="arrow-right" size="18px" color="#7e847b" custom-class="ml-auto" />
         </button>
         <button class="m-0 h-[89px] w-full flex items-center border-0 bg-transparent px-4 text-left after:border-0" @click="openAbout">
           <view class="h-10 w-10 flex items-center justify-center rounded-full bg-[#f8faf7]">
@@ -139,7 +137,6 @@ const openAbout = () => {
           <text class="ml-4 text-base text-[#1c1c1a] font-medium">
             关于
           </text>
-          <wd-icon name="arrow-right" size="18px" color="#7e847b" custom-class="ml-auto" />
         </button>
       </view>
     </view>

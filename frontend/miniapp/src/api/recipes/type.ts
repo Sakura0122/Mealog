@@ -37,6 +37,10 @@ export interface RecipeSavedResult {
   id: string
 }
 
+export interface RecipeCreatedResult {
+  id: string
+}
+
 export interface RecipePage {
   total: number
   page_count: number

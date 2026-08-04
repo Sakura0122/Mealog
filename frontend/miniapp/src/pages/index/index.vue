@@ -2,7 +2,6 @@
 import type { MealRecordCalendarDay, MealRecordListItem } from '@/api/meal-records/type'
 import { mealRecordApi } from '@/api/meal-records'
 import { formatDateParam, formatMonthParam, formatPeriodText, formatTimeText } from '@/utils/date'
-import { getImageTakenAt } from '@/utils/image-exif'
 import { getErrorMessage } from '@/utils/request'
 
 definePage({
@@ -122,17 +121,13 @@ const chooseRecordImage = (sourceType: 'camera' | 'album') => {
   skipNextHomeLoad.value = true
   uni.chooseImage({
     count: 9,
-    // 保留首张原图的 EXIF，上传前仍由统一文件服务压缩。
     sizeType: ['original'],
     sourceType: [sourceType],
-    success: async ({ tempFilePaths }) => {
+    success: ({ tempFilePaths }) => {
       // 部分 uni-app 平台声明单图结果为字符串，进入编辑页前统一成路径数组。
       const imagePaths = Array.isArray(tempFilePaths) ? tempFilePaths : [tempFilePaths]
       if (!imagePaths[0])
         return
-      const takenAt = await getImageTakenAt(imagePaths[0])
-      // 现场拍摄的时间就是当前时刻；相册图缺少元数据时交给用户明确选择。
-      const resolvedTakenAt = takenAt ?? (sourceType === 'camera' ? Date.now() : null)
       showSourcePicker.value = false
       uni.navigateTo({
         url: '/pages/record-edit/index',
@@ -140,8 +135,7 @@ const chooseRecordImage = (sourceType: 'camera' | 'album') => {
           // 临时路径不拼接到 URL，避免多图路径超过页面地址长度限制。
           eventChannel.emit('selectedRecordImages', {
             imagePaths,
-            takenAt: resolvedTakenAt,
-            photoTimeMissing: resolvedTakenAt === null,
+            takenAt: Date.now(),
           })
         },
       })
@@ -149,8 +143,8 @@ const chooseRecordImage = (sourceType: 'camera' | 'album') => {
   })
 }
 
-const openRecordDetail = (recordId: string) => {
-  uni.navigateTo({ url: `/pages/record-detail/index?id=${recordId}` })
+const openRecordEditor = (recordId: string) => {
+  uni.navigateTo({ url: `/pages/record-edit/index?id=${recordId}` })
 }
 </script>
 
@@ -245,7 +239,7 @@ const openRecordDetail = (recordId: string) => {
         </view>
         <wd-empty v-else-if="records.length === 0" custom-class="mt-4" icon="calendar" tip="这一天还没有饮食记录" />
         <view v-else class="flex flex-col gap-4">
-          <button v-for="record in records" :key="record.id" class="m-0 h-24 w-full flex items-center border-0 rounded-3xl bg-white px-4 py-[14px] text-left shadow-[0_10px_25px_-5px_rgba(82,99,76,0.08)] after:border-0" @click="openRecordDetail(record.id)">
+          <button v-for="record in records" :key="record.id" class="m-0 h-24 w-full flex items-center border-0 rounded-3xl bg-white px-4 py-[14px] text-left shadow-[0_10px_25px_-5px_rgba(82,99,76,0.08)] after:border-0" @click="openRecordEditor(record.id)">
             <view class="w-[55px] flex shrink-0 flex-col items-center border-r border-[#c4c8be]/30 pr-4">
               <text class="text-[10px] text-[#8b9187] leading-[14px]">
                 {{ formatPeriodText(record.eaten_at) }}

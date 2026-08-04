@@ -32,7 +32,6 @@ declare global {
   const getCurrentPath: typeof import('./utils/index')['getCurrentPath']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
   const getErrorMessage: typeof import('./utils/request')['getErrorMessage']
-  const getImageTakenAt: typeof import('./utils/image-exif')['getImageTakenAt']
   const h: typeof import('vue')['h']
   const initializeAuth: typeof import('./utils/request')['initializeAuth']
   const inject: typeof import('vue')['inject']
@@ -157,7 +156,6 @@ declare module 'vue' {
     readonly getCurrentPath: UnwrapRef<typeof import('./utils/index')['getCurrentPath']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getErrorMessage: UnwrapRef<typeof import('./utils/request')['getErrorMessage']>
-    readonly getImageTakenAt: UnwrapRef<typeof import('./utils/image-exif')['getImageTakenAt']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly initializeAuth: UnwrapRef<typeof import('./utils/request')['initializeAuth']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>

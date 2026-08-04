@@ -9,6 +9,7 @@ from src.api.meal_records.model import MealRecord
 from src.api.recipes.model import Recipe, RecipeIngredient
 from src.api.recipes.schema import (
     RecipeCreate,
+    RecipeCreatedResponse,
     RecipeListItemResponse,
     RecipeResponse,
     RecipeSavedResponse,
@@ -22,7 +23,11 @@ from src.common.result_code import ResultCodeEnum
 from src.rustfs.url import build_public_file_url
 
 
-async def create_recipe(payload: RecipeCreate, user_id: UUID, session: AsyncSession) -> None:
+async def create_recipe(
+    payload: RecipeCreate,
+    user_id: UUID,
+    session: AsyncSession,
+) -> RecipeCreatedResponse:
     """创建当前用户的菜谱及有序食材。"""
 
     # 菜名在同一用户下保持唯一，避免列表和饮食记录联想出现同名歧义。
@@ -39,6 +44,7 @@ async def create_recipe(payload: RecipeCreate, user_id: UUID, session: AsyncSess
 
     session.add_all(_create_ingredients(recipe.id, payload.ingredients))
     await session.flush()
+    return RecipeCreatedResponse(id=recipe.id)
 
 
 async def list_recipes(

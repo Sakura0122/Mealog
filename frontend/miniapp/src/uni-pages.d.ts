@@ -13,7 +13,6 @@ type _LocationUrl =
   "/pages/recipe-detail/index" |
   "/pages/recipe-share/index" |
   "/pages/recipes/index" |
-  "/pages/record-detail/index" |
   "/pages/record-edit/index";
 
 interface NavigateToOptions {

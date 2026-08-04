@@ -67,6 +67,12 @@ class RecipeCreate(RecipePayload):
     pass
 
 
+class RecipeCreatedResponse(BaseModel):
+    """新增菜谱响应。"""
+
+    id: str = Field(description="新增的菜谱 ID")
+
+
 class RecipeUpdate(RecipePayload):
     """更新菜谱请求。"""
 

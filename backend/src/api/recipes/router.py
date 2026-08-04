@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from src.api.recipes import service as recipe_service
 from src.api.recipes.schema import (
     RecipeCreate,
+    RecipeCreatedResponse,
     RecipeListItemResponse,
     RecipeResponse,
     RecipeSavedResponse,
@@ -20,14 +21,14 @@ from src.core.dependencies import CurrentUserIdDep, SessionDep
 router = APIRouter(prefix="/recipes", tags=["菜谱"])
 
 
-@router.post("", response_model=Result[None], summary="新增菜谱")
+@router.post("", response_model=Result[RecipeCreatedResponse], summary="新增菜谱")
 async def create_recipe(
     payload: RecipeCreate,
     user_id: CurrentUserIdDep,
     session: SessionDep,
-) -> Result[None]:
-    await recipe_service.create_recipe(payload, user_id, session)
-    return Result.success()
+) -> Result[RecipeCreatedResponse]:
+    recipe = await recipe_service.create_recipe(payload, user_id, session)
+    return Result.success(recipe)
 
 
 @router.get(

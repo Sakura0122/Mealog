@@ -7,7 +7,6 @@ import { mealRecordApi } from '@/api/meal-records'
 import { recipeApi } from '@/api/recipes'
 import { storeApi } from '@/api/stores'
 import { formatDateTimePayload, formatDateTimeText, parseLocalDate } from '@/utils/date'
-import { getImageTakenAt } from '@/utils/image-exif'
 import { getErrorMessage } from '@/utils/request'
 
 definePage({
@@ -26,8 +25,7 @@ interface EditableImage {
 
 interface SelectedRecordImagesPayload {
   imagePaths: string[]
-  takenAt: number | null
-  photoTimeMissing: boolean
+  takenAt: number
 }
 
 const pageInstance = getCurrentInstance()?.proxy as {
@@ -40,7 +38,6 @@ const loadError = ref('')
 
 const eatenAt = ref(Date.now())
 const showDatePicker = ref(false)
-const photoTimeMissing = ref(false)
 
 const sourceType = ref<MealSourceType>('SELF_MADE')
 const dishName = ref('')
@@ -186,38 +183,22 @@ const chooseImages = (sourceTypeOption?: 'camera' | 'album') => {
 
   uni.chooseImage({
     count: remaining,
-    // 首张原图用于读取拍摄时间，上传前仍由统一文件服务压缩。
     sizeType: ['original'],
     sourceType: sourceTypeOption ? [sourceTypeOption] : ['album', 'camera'],
-    success: async ({ tempFilePaths }) => {
+    success: ({ tempFilePaths }) => {
       // 部分 uni-app 平台声明单图结果为字符串，提交前统一成路径数组。
       const paths = Array.isArray(tempFilePaths) ? tempFilePaths : [tempFilePaths]
       const shouldUseTakenAt = !recordId.value && images.value.length === 0 && Boolean(paths[0])
-      const takenAt = shouldUseTakenAt ? await getImageTakenAt(paths[0]) : null
       images.value.push(...paths.map(path => ({ previewUrl: path, pendingPath: path })))
-      if (shouldUseTakenAt) {
-        if (takenAt !== null) {
-          eatenAt.value = takenAt
-          photoTimeMissing.value = false
-        }
-        else if (sourceTypeOption === 'camera') {
-          eatenAt.value = Date.now()
-          photoTimeMissing.value = false
-        }
-        else {
-          // 相册图可能被转存或清除元数据，不能把临时文件生成时间冒充拍摄时间。
-          photoTimeMissing.value = true
-          useGlobalToast().warning('照片不含拍摄时间，请手动选择')
-        }
-      }
+      // 新增记录首次选图统一采用当前时间，避免读取原图元数据阻塞页面交互。
+      if (shouldUseTakenAt)
+        eatenAt.value = Date.now()
     },
   })
 }
 
 const removeImage = (index: number) => {
   images.value.splice(index, 1)
-  if (images.value.length === 0)
-    photoTimeMissing.value = false
 }
 
 const previewImages = (current: string) => {
@@ -279,15 +260,12 @@ onLoad((options) => {
   const takenAt = Number(options?.takenAt)
   if (!id && Number.isFinite(takenAt) && takenAt > 0)
     eatenAt.value = takenAt
-  photoTimeMissing.value = !id && options?.photoTimeMissing === '1'
 
   const eventChannel = pageInstance?.getOpenerEventChannel?.()
   eventChannel?.once('selectedRecordImages', (payload: SelectedRecordImagesPayload) => {
     // 首页最多传入 9 张临时图片，新增页沿用现有图片列表和上传流程。
     images.value.push(...payload.imagePaths.map(path => ({ previewUrl: path, pendingPath: path })))
-    if (payload.takenAt !== null)
-      eatenAt.value = payload.takenAt
-    photoTimeMissing.value = payload.photoTimeMissing
+    eatenAt.value = payload.takenAt
   })
 })
 
@@ -296,10 +274,6 @@ const openDatePicker = () => {
   showSuggestions.value = false
   uni.hideKeyboard()
   showDatePicker.value = true
-}
-
-const confirmPhotoTime = () => {
-  photoTimeMissing.value = false
 }
 
 const saving = ref(false)
@@ -321,25 +295,41 @@ const uploadImages = async () => {
 }
 
 const saveRecord = async () => {
-  if (photoTimeMissing.value) {
-    useGlobalToast().warning('请选择进食时间')
-    return
-  }
-  if (!dishName.value.trim()) {
+  const normalizedDishName = dishName.value.trim()
+  if (!normalizedDishName) {
     useGlobalToast().warning('请输入菜品名称')
     return
   }
 
   saving.value = true
   try {
+    const payloadImages = await uploadImages()
+    let recipeId = sourceType.value === 'SELF_MADE' ? selectedRecipeId.value : ''
+    if (sourceType.value === 'SELF_MADE' && !recipeId) {
+      const existingRecipe = recipeOptions.value.find(recipe => recipe.name === normalizedDishName)
+      if (existingRecipe) {
+        recipeId = existingRecipe.id
+      }
+      else {
+        // 手动输入的新菜品先创建为草稿菜谱，再关联到本次饮食记录。
+        const createdRecipe = await recipeApi.create({
+          name: normalizedDishName,
+          cover_object_key: null,
+          ingredients: [],
+          steps: null,
+        })
+        recipeId = createdRecipe.id
+      }
+    }
+
     const payload: MealRecordPayload = {
-      dish_name: dishName.value.trim(),
+      dish_name: normalizedDishName,
       eaten_at: formatDateTimePayload(eatenAt.value),
       source_type: sourceType.value,
       store_id: sourceType.value === 'DINING_OUT' ? selectedStore.value?.id ?? null : null,
-      recipe_id: sourceType.value === 'SELF_MADE' ? selectedRecipeId.value || null : null,
+      recipe_id: recipeId || null,
       note: note.value.trim() || null,
-      images: await uploadImages(),
+      images: payloadImages,
     }
 
     const isEditing = Boolean(recordId.value)
@@ -348,7 +338,7 @@ const saveRecord = async () => {
     else
       await mealRecordApi.create(payload)
 
-    // 保存后清空详情和编辑页栈，确保新增、编辑都直接回到首页。
+    // 保存后清空当前页面栈，确保新增、编辑都直接回到首页。
     uni.reLaunch({
       url: '/pages/index/index',
       success: () => useGlobalToast().success(isEditing ? '饮食记录已更新' : '饮食记录已保存'),
@@ -361,11 +351,42 @@ const saveRecord = async () => {
     saving.value = false
   }
 }
+
+const deleting = ref(false)
+const removeRecord = async () => {
+  deleting.value = true
+  try {
+    await mealRecordApi.remove(recordId.value)
+    uni.reLaunch({
+      url: '/pages/index/index',
+      success: () => useGlobalToast().success('饮食记录已删除'),
+    })
+  }
+  catch (error) {
+    useGlobalToast().error(getErrorMessage(error))
+  }
+  finally {
+    deleting.value = false
+  }
+}
+
+const confirmDelete = () => {
+  useGlobalDialog().confirm({
+    title: '删除饮食记录',
+    msg: '删除后无法恢复，确认删除吗？',
+    confirmButtonText: '删除',
+    cancelButtonText: '取消',
+    success: (result) => {
+      if (result.action === 'confirm')
+        removeRecord()
+    },
+  })
+}
 </script>
 
 <template>
   <view class="min-h-screen bg-[#fcf9f6] pb-8">
-    <AppTopBar home />
+    <AppTopBar />
 
     <view v-if="loading" class="h-96 flex items-center justify-center">
       <wd-loading text="加载饮食记录" color="#71836b" />
@@ -395,9 +416,6 @@ const saveRecord = async () => {
         <view class="mx-auto mt-2 h-1 w-12 rounded-full bg-[#dfddda]" />
         <button v-if="images.length && images.length < 9" class="absolute bottom-0 right-[-14px] m-0 h-11 w-11 flex items-center justify-center border-0 rounded-full bg-[#e1e6c2] p-0 shadow-[0_3px_8px_rgba(82,99,76,0.16)] after:border-0" aria-label="继续添加图片" @click="chooseImages()">
           <wd-icon name="camera" size="23px" color="#5f6848" />
-          <view class="absolute right-0 top-0 h-3.5 w-3.5 flex items-center justify-center rounded-full bg-[#f7f5ef]">
-            <wd-icon name="plus" size="10px" color="#5f6848" />
-          </view>
         </button>
       </view>
 
@@ -413,8 +431,8 @@ const saveRecord = async () => {
       <view class="mx-5 mt-4 overflow-visible border border-[#e5e2df] rounded-3xl bg-white shadow-[0_8px_20px_rgba(0,0,0,0.04)]">
         <button class="m-0 h-[57px] w-full flex items-center border-0 border-b border-[#ebe8e4] bg-transparent px-5 text-left after:border-0" @click="openDatePicker">
           <wd-icon name="calendar-line" size="19px" color="#5c6949" />
-          <text class="ml-4 text-base" :class="photoTimeMissing ? 'text-[#a14444]' : 'text-[#1c1c1a]'">
-            {{ photoTimeMissing ? '请选择进食时间' : formatDateTimeText(eatenAt) }}
+          <text class="ml-4 text-base text-[#1c1c1a]">
+            {{ formatDateTimeText(eatenAt) }}
           </text>
           <wd-icon name="arrow-right" size="15px" color="#c6c8c3" custom-class="ml-auto" />
         </button>
@@ -436,22 +454,24 @@ const saveRecord = async () => {
             <wd-icon name="book" size="18px" color="#5c6949" />
             <input v-model="dishName" maxlength="100" class="ml-4 min-w-0 flex-1 text-base text-[#1c1c1a]" placeholder="选择已有菜谱或输入菜品名称" placeholder-class="text-[#c7c7c1]" @focus="showSuggestions = true" @input="clearRecipeSelection">
           </view>
-          <view v-if="showSuggestions && filteredRecipes.length" class="absolute left-1 right-1 top-[56px] z-20 border border-[#d5d3ce] rounded-lg bg-white px-8 shadow-[0_8px_18px_rgba(0,0,0,0.12)]">
-            <button v-for="recipe in filteredRecipes" :key="recipe.id" class="m-0 min-h-[59px] w-full flex items-center border-0 border-b border-[#eceae6] bg-transparent py-2 text-left after:border-0 last:border-b-0" @click="chooseRecipe(recipe)">
-              <view>
-                <view class="flex items-center gap-2">
-                  <text class="text-sm text-[#1c1c1a] font-medium">
-                    {{ recipe.name }}
-                  </text>
-                  <text class="rounded px-1.5 py-0.5 text-[10px]" :class="recipe.status === 'COMPLETED' ? 'bg-[#d5e8cb] text-[#52634c]' : 'bg-[#e7e5e2] text-[#666761]'">
-                    {{ recipe.status === 'COMPLETED' ? '已完善' : '草稿' }}
+          <view v-if="showSuggestions && filteredRecipes.length" class="absolute left-8 right-8 top-[56px] z-20 overflow-hidden border border-[#d5d3ce] rounded-lg bg-white px-5 shadow-[0_8px_18px_rgba(0,0,0,0.12)]">
+            <scroll-view scroll-y class="max-h-[236px]">
+              <button v-for="recipe in filteredRecipes" :key="recipe.id" class="m-0 min-h-[59px] w-full flex items-center border-0 border-b border-[#eceae6] bg-transparent py-2 text-left after:border-0 last:border-b-0" @click="chooseRecipe(recipe)">
+                <view>
+                  <view class="flex items-center gap-2">
+                    <text class="text-sm text-[#1c1c1a] font-medium">
+                      {{ recipe.name }}
+                    </text>
+                    <text class="rounded px-1.5 py-0.5 text-[10px]" :class="recipe.status === 'COMPLETED' ? 'bg-[#d5e8cb] text-[#52634c]' : 'bg-[#e7e5e2] text-[#666761]'">
+                      {{ recipe.status === 'COMPLETED' ? '已完善' : '草稿' }}
+                    </text>
+                  </view>
+                  <text class="mt-1 block text-[10px] text-[#777973]">
+                    做过 {{ recipe.usage_count }} 次
                   </text>
                 </view>
-                <text class="mt-1 block text-[10px] text-[#777973]">
-                  做过 {{ recipe.usage_count }} 次
-                </text>
-              </view>
-            </button>
+              </button>
+            </scroll-view>
           </view>
         </view>
 
@@ -480,15 +500,18 @@ const saveRecord = async () => {
         </view>
       </view>
 
-      <button :disabled="saving" class="mx-5 mt-7 h-14 flex items-center justify-center border-0 rounded-full bg-[#d5e8cb] text-sm text-[#101f0d] shadow-[0_5px_10px_rgba(80,100,72,0.14)] after:border-0 disabled:opacity-60" @click="saveRecord">
+      <button :disabled="saving || deleting" class="mx-5 mt-7 h-14 flex items-center justify-center border-0 rounded-full bg-[#d5e8cb] text-sm text-[#101f0d] shadow-[0_5px_10px_rgba(80,100,72,0.14)] after:border-0 disabled:opacity-60" @click="saveRecord">
         <wd-loading v-if="saving" size="20px" color="#24331f" />
         <text :class="saving ? 'ml-2' : ''">
-          {{ saving ? '保存中' : recordId ? '更新记录' : '保存记录' }}
+          {{ saving ? '保存中' : '保存记录' }}
         </text>
+      </button>
+      <button v-if="recordId" :disabled="saving || deleting" class="mx-auto mt-4 block border-0 bg-transparent p-0 text-sm text-[#8f8f8a] after:border-0 disabled:opacity-60" @click="confirmDelete">
+        {{ deleting ? '删除中' : '删除记录' }}
       </button>
     </template>
 
-    <wd-datetime-picker v-model="eatenAt" v-model:visible="showDatePicker" :z-index="100" type="datetime" title="选择进食时间" root-portal @confirm="confirmPhotoTime" />
+    <wd-datetime-picker v-model="eatenAt" v-model:visible="showDatePicker" :z-index="100" type="datetime" title="选择进食时间" root-portal />
 
     <wd-popup v-model="showStorePicker" position="bottom" round safe-area-inset-bottom root-portal custom-style="max-height: 75vh; background: #fcf9f6;">
       <view class="px-5 pb-5 pt-4">
