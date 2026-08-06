@@ -57,8 +57,8 @@ export const fileApi = {
   uploadImage(filePath: string): Promise<UploadFileResponse> {
     return uploadImage(filePath, 'images', '图片上传失败，请稍后重试')
   },
-  uploadRecordImage(filePath: string): Promise<UploadFileResponse> {
-    // 饮食记录列表会使用缩略图，菜谱封面等普通图片无需额外生成副本。
+  uploadImageWithThumbnail(filePath: string): Promise<UploadFileResponse> {
+    // 饮食记录和菜谱列表会使用缩略图，头像等普通图片无需额外生成副本。
     return uploadImage(filePath, 'images', '图片上传失败，请稍后重试', true)
   },
   uploadAvatar(filePath: string): Promise<UploadFileResponse> {

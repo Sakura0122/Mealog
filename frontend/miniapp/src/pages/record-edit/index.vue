@@ -296,7 +296,7 @@ const uploadImages = async () => {
   const payloadImages: MealRecordPayload['images'] = []
   for (const image of images.value) {
     if (image.pendingPath) {
-      const uploaded = await fileApi.uploadRecordImage(image.pendingPath)
+      const uploaded = await fileApi.uploadImageWithThumbnail(image.pendingPath)
       payloadImages.push({
         original_object_key: uploaded.object_key,
         processed_object_key: uploaded.processed_object_key,
@@ -352,6 +352,7 @@ const saveRecord = async () => {
         const createdRecipe = await recipeApi.create({
           name: normalizedDishName,
           cover_object_key: payloadImages[0]?.original_object_key ?? null,
+          cover_processed_object_key: payloadImages[0]?.processed_object_key ?? null,
           ingredients: [],
           steps: null,
         })

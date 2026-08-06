@@ -32,6 +32,7 @@ const removeIngredient = (index: number) => {
 const steps = ref('')
 
 const coverObjectKey = ref<string | null>(null)
+const coverProcessedObjectKey = ref<string | null>(null)
 const coverPreviewUrl = ref('')
 const pendingCoverPath = ref('')
 const loadRecipe = async () => {
@@ -43,7 +44,8 @@ const loadRecipe = async () => {
     ingredientItems.value = [...recipe.ingredients]
     steps.value = recipe.steps ?? ''
     coverObjectKey.value = recipe.cover_object_key
-    coverPreviewUrl.value = recipe.cover_url ?? ''
+    coverProcessedObjectKey.value = recipe.cover_processed_object_key
+    coverPreviewUrl.value = recipe.cover_processed_url ?? recipe.cover_url ?? ''
   }
   catch (error) {
     loadError.value = getErrorMessage(error)
@@ -77,17 +79,22 @@ const chooseCover = () => {
 
 const removeCover = () => {
   coverObjectKey.value = null
+  coverProcessedObjectKey.value = null
   coverPreviewUrl.value = ''
   pendingCoverPath.value = ''
 }
 
 const saving = ref(false)
 
-const buildPayload = (coverKey: string | null): RecipePayload => {
+const buildPayload = (
+  coverKey: string | null,
+  coverProcessedKey: string | null,
+): RecipePayload => {
   const pendingIngredient = ingredientDraft.value.trim()
   return {
     name: recipeName.value.trim(),
     cover_object_key: coverKey,
+    cover_processed_object_key: coverProcessedKey,
     // 未按回车确认的最后一项也随表单提交，避免用户输入丢失。
     ingredients: pendingIngredient
       ? [...ingredientItems.value, pendingIngredient]
@@ -105,12 +112,14 @@ const saveRecipe = async () => {
   saving.value = true
   try {
     let coverKey = coverObjectKey.value
+    let coverProcessedKey = coverProcessedObjectKey.value
     if (pendingCoverPath.value) {
-      const uploadedCover = await fileApi.uploadImage(pendingCoverPath.value)
+      const uploadedCover = await fileApi.uploadImageWithThumbnail(pendingCoverPath.value)
       coverKey = uploadedCover.object_key
+      coverProcessedKey = uploadedCover.processed_object_key
     }
 
-    const payload = buildPayload(coverKey)
+    const payload = buildPayload(coverKey, coverProcessedKey)
     if (recipeId.value)
       await recipeApi.update(recipeId.value, payload)
     else
@@ -185,7 +194,7 @@ const saveRecipe = async () => {
               </button>
             </view>
             <!-- 已有食材时隐藏占位文案，避免标签后重复出现“食材”提示。 -->
-            <input v-model="ingredientDraft" confirm-hold confirm-type="done" class="h-8 min-w-[96px] flex-1 text-base text-[#1c1c1a]" :placeholder="ingredientItems.length ? '' : '食材，录入一种食材后按回车键继续录入'" placeholder-class="text-[#c7c7c1]" @confirm="addIngredient">
+            <input v-model="ingredientDraft" confirm-hold confirm-type="done" class="h-8 min-w-[96px] flex-1 text-base text-[#1c1c1a]" :placeholder="ingredientItems.length ? '' : '录入一种食材后按回车键继续录入'" placeholder-class="text-[#c7c7c1]" @confirm="addIngredient">
           </view>
         </view>
         <!-- 步骤保留紧凑的初始高度，并随多行内容自动增高。 -->
@@ -193,7 +202,7 @@ const saveRecipe = async () => {
           <view class="mt-1 h-6 w-5 flex shrink-0 items-center justify-center">
             <wd-icon name="file" size="18px" color="#777a77" />
           </view>
-          <textarea v-model="steps" auto-height class="ml-3 min-h-18 min-w-0 flex-1 text-base text-[#1c1c1a] leading-6" placeholder="制作步骤" placeholder-class="text-[#c7c7c1]" />
+          <textarea v-model="steps" auto-height class="ml-3 min-h-18 min-w-0 flex-1 text-base text-[#1c1c1a] leading-6" placeholder="制作步骤" placeholder-class="text-[#c7c7c1]" maxlength="200" />
         </view>
       </view>
 

@@ -22,6 +22,9 @@ class Recipe(BaseTable):
     cover_object_key: Mapped[str | None] = mapped_column(
         String(512), nullable=True, comment="菜谱封面在对象存储中的文件键"
     )
+    cover_processed_object_key: Mapped[str | None] = mapped_column(
+        String(512), nullable=True, comment="菜谱封面缩略图在对象存储中的文件键，未生成时为空"
+    )
     steps: Mapped[str | None] = mapped_column(Text, nullable=True, comment="菜谱制作步骤")
     status: Mapped[str] = mapped_column(
         String(20),

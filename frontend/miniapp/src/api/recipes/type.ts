@@ -3,6 +3,7 @@ export type RecipeStatus = 'DRAFT' | 'COMPLETED'
 export interface RecipePayload {
   name: string
   cover_object_key: string | null
+  cover_processed_object_key: string | null
   ingredients: string[]
   steps: string | null
 }
@@ -19,6 +20,7 @@ export interface RecipeListItem {
 export interface RecipeDetail extends RecipePayload {
   id: string
   cover_url: string | null
+  cover_processed_url: string | null
   status: RecipeStatus
   usage_count: number
   created_at: string
@@ -29,6 +31,7 @@ export interface RecipeShareDetail {
   id: string
   name: string
   cover_url: string | null
+  cover_processed_url: string | null
   ingredients: string[]
   steps: string | null
 }

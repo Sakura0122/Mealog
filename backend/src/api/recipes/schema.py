@@ -17,6 +17,12 @@ class RecipePayload(BaseModel):
         max_length=512,
         description="菜谱封面在对象存储中的文件键，无封面时为空",
     )
+    cover_processed_object_key: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=512,
+        description="菜谱封面缩略图在对象存储中的文件键，未生成时为空",
+    )
     ingredients: list[str] = Field(
         default_factory=list,
         max_length=100,
@@ -38,7 +44,7 @@ class RecipePayload(BaseModel):
             raise ValueError("菜谱名称不能为空")
         return value
 
-    @field_validator("cover_object_key", "steps")
+    @field_validator("cover_object_key", "cover_processed_object_key", "steps")
     @classmethod
     def normalize_optional_text(cls, value: str | None) -> str | None:
         """将可选文本规范为去除首尾空白后的值或空值。"""
@@ -84,7 +90,7 @@ class RecipeListItemResponse(BaseModel):
 
     id: str = Field(description="菜谱 ID")
     name: str = Field(description="菜谱名称")
-    cover_url: str | None = Field(description="菜谱封面公开访问地址，无封面时为空")
+    cover_url: str | None = Field(description="菜谱列表封面公开访问地址，优先返回缩略图")
     status: RecipeStatus = Field(description="菜谱状态：DRAFT 草稿，COMPLETED 已完善")
     usage_count: int = Field(description="关联该菜谱的有效饮食记录数量")
     updated_at: datetime = Field(description="菜谱最后更新时间")
@@ -97,6 +103,10 @@ class RecipeResponse(BaseModel):
     name: str = Field(description="菜谱名称")
     cover_object_key: str | None = Field(description="菜谱封面在对象存储中的文件键，无封面时为空")
     cover_url: str | None = Field(description="菜谱封面公开访问地址，无封面时为空")
+    cover_processed_object_key: str | None = Field(
+        description="菜谱封面缩略图在对象存储中的文件键，未生成时为空"
+    )
+    cover_processed_url: str | None = Field(description="菜谱封面缩略图公开访问地址，未生成时为空")
     ingredients: list[str] = Field(description="按展示顺序排列的食材名称")
     steps: str | None = Field(description="菜谱制作步骤，未填写时为空")
     status: RecipeStatus = Field(description="菜谱状态：DRAFT 草稿，COMPLETED 已完善")
@@ -111,6 +121,7 @@ class RecipeShareResponse(BaseModel):
     id: str = Field(description="原菜谱 ID")
     name: str = Field(description="菜谱名称")
     cover_url: str | None = Field(description="菜谱封面公开访问地址，无封面时为空")
+    cover_processed_url: str | None = Field(description="菜谱封面缩略图公开访问地址，未生成时为空")
     ingredients: list[str] = Field(description="按展示顺序排列的食材名称")
     steps: str | None = Field(description="菜谱制作步骤，未填写时为空")
 

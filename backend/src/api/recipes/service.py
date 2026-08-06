@@ -32,10 +32,12 @@ async def create_recipe(
 
     # 菜名在同一用户下保持唯一，避免列表和饮食记录联想出现同名歧义。
     await _validate_unique_name(payload.name, user_id, session)
+    _validate_cover_keys(payload)
     recipe = Recipe(
         user_id=str(user_id),
         name=payload.name,
         cover_object_key=payload.cover_object_key,
+        cover_processed_object_key=payload.cover_processed_object_key,
         steps=payload.steps,
         status=_calculate_status(payload.ingredients, payload.steps),
     )
@@ -139,6 +141,7 @@ async def save_shared_recipe(
         source_recipe_id=source.id,
         name=source.name,
         cover_object_key=source.cover_object_key,
+        cover_processed_object_key=source.cover_processed_object_key,
         steps=source.steps,
         status=source.status,
     )
@@ -163,9 +166,11 @@ async def update_recipe(
 
     recipe = await _get_owned_recipe(recipe_id, user_id, session)
     await _validate_unique_name(payload.name, user_id, session, recipe.id)
+    _validate_cover_keys(payload)
 
     recipe.name = payload.name
     recipe.cover_object_key = payload.cover_object_key
+    recipe.cover_processed_object_key = payload.cover_processed_object_key
     recipe.steps = payload.steps
     recipe.status = _calculate_status(payload.ingredients, payload.steps)
 
@@ -213,6 +218,13 @@ async def _get_owned_recipe(
     if recipe is None:
         raise BusinessException(ResultCodeEnum.NOT_FOUND_ERROR, "菜谱不存在")
     return recipe
+
+
+def _validate_cover_keys(payload: RecipeCreate | RecipeUpdate) -> None:
+    """校验菜谱缩略图必须依附于对应的原始封面。"""
+
+    if payload.cover_object_key is None and payload.cover_processed_object_key is not None:
+        raise BusinessException(ResultCodeEnum.PARAM_ERROR, "菜谱缩略图缺少原始封面")
 
 
 async def _get_active_shared_recipe(recipe_id: UUID, session: AsyncSession) -> Recipe:
@@ -329,14 +341,11 @@ def _to_list_item_response(recipe: Recipe, usage_count: int) -> RecipeListItemRe
     :return: 菜谱列表项响应
     """
 
+    cover_object_key = recipe.cover_processed_object_key or recipe.cover_object_key
     return RecipeListItemResponse(
         id=recipe.id,
         name=recipe.name,
-        cover_url=(
-            build_public_file_url(recipe.cover_object_key)
-            if recipe.cover_object_key is not None
-            else None
-        ),
+        cover_url=build_public_file_url(cover_object_key) if cover_object_key else None,
         status=cast("RecipeStatus", recipe.status),
         usage_count=usage_count,
         updated_at=recipe.updated_at,
@@ -361,9 +370,15 @@ def _to_recipe_response(
         id=recipe.id,
         name=recipe.name,
         cover_object_key=recipe.cover_object_key,
+        cover_processed_object_key=recipe.cover_processed_object_key,
         cover_url=(
             build_public_file_url(recipe.cover_object_key)
             if recipe.cover_object_key is not None
+            else None
+        ),
+        cover_processed_url=(
+            build_public_file_url(recipe.cover_processed_object_key)
+            if recipe.cover_processed_object_key is not None
             else None
         ),
         ingredients=[ingredient.name for ingredient in ingredients],
@@ -387,6 +402,11 @@ def _to_share_response(
         cover_url=(
             build_public_file_url(recipe.cover_object_key)
             if recipe.cover_object_key is not None
+            else None
+        ),
+        cover_processed_url=(
+            build_public_file_url(recipe.cover_processed_object_key)
+            if recipe.cover_processed_object_key is not None
             else None
         ),
         ingredients=[ingredient.name for ingredient in ingredients],

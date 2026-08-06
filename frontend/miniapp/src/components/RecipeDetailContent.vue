@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { RecipeShareDetail } from '@/api/recipes/type'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   recipe: RecipeShareDetail
   shared?: boolean
   actionLabel?: string
@@ -16,6 +16,17 @@ const emit = defineEmits<{
   action: []
   edit: []
 }>()
+
+const previewCover = () => {
+  if (!props.recipe.cover_url)
+    return
+
+  // 首屏展示缩略图，只有用户主动查看大图时才加载原图。
+  uni.previewImage({
+    current: props.recipe.cover_url,
+    urls: [props.recipe.cover_url],
+  })
+}
 </script>
 
 <template>
@@ -24,7 +35,9 @@ const emit = defineEmits<{
     <AppTopBar :show-back="!shared" :edit="!shared" :close="shared" @edit="emit('edit')" />
 
     <view class="mx-auto mt-3 w-[280px] rotate-1 bg-white p-3 pb-8 shadow-[0_5px_12px_rgba(0,0,0,0.12)]">
-      <image v-if="recipe.cover_url" :src="recipe.cover_url" mode="aspectFill" class="h-[256px] w-full" />
+      <button v-if="recipe.cover_url" class="m-0 h-[256px] w-full border-0 bg-transparent p-0 after:border-0" aria-label="查看封面大图" @click="previewCover">
+        <image :src="recipe.cover_processed_url ?? recipe.cover_url" mode="aspectFill" class="h-full w-full" />
+      </button>
       <view v-else class="h-[256px] w-full flex flex-col items-center justify-center bg-[#e5e3e0] text-[#4f5650]">
         <wd-icon name="book" size="42px" color="#4f5650" />
         <text class="mt-2 text-xs">
