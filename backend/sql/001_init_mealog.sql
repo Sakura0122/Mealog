@@ -110,13 +110,13 @@ CREATE TABLE IF NOT EXISTS `meal_records`
   COLLATE = utf8mb4_0900_ai_ci
     COMMENT = '饮食记录表，保存单道菜品的时间、来源、关联和备注';
 
--- 饮食记录图片表：保存一条饮食记录的原图、可选抠图结果、封面标记和展示顺序。
+-- 饮食记录图片表：保存一条饮食记录的原图、缩略图、封面标记和展示顺序。
 CREATE TABLE IF NOT EXISTS `meal_record_images`
 (
     `id`                   CHAR(36)         NOT NULL COMMENT '饮食记录图片主键 UUID',
     `meal_record_id`       CHAR(36)         NOT NULL COMMENT '所属饮食记录 UUID',
     `original_object_key`  VARCHAR(512)     NOT NULL COMMENT '原始图片在对象存储中的文件键',
-    `processed_object_key` VARCHAR(512)     NULL COMMENT '自动抠图结果在对象存储中的文件键，未处理或处理失败时为空',
+    `processed_object_key` VARCHAR(512)     NULL COMMENT '缩略图在对象存储中的文件键，未生成时为空',
     `sort_order`           TINYINT UNSIGNED NOT NULL COMMENT '图片展示顺序，从 0 开始，单条记录最多 9 张，由应用层校验',
     `is_cover`             TINYINT(1)       NOT NULL DEFAULT 0 COMMENT '是否为当前记录封面：0 否，1 是，由应用层保证单封面',
     `created_at`           DATETIME(3)      NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
@@ -128,4 +128,4 @@ CREATE TABLE IF NOT EXISTS `meal_record_images`
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT = '饮食记录图片表，保存原图、抠图结果、顺序和封面标记';
+    COMMENT = '饮食记录图片表，保存原图、缩略图、顺序和封面标记';

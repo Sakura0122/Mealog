@@ -24,11 +24,28 @@ def upload_user_file(
         UploadType,
         Form(alias="type", description="文件分类：avatar、images 或 files"),
     ],
+    generate_thumbnail: Annotated[
+        bool,
+        Form(description="是否同时生成饮食记录缩略图"),
+    ] = False,
 ) -> Result[UploadFileResponse]:
-    file_info = upload_file(file, upload_type, user_id)
+    file_info, thumbnail_info = upload_file(
+        file,
+        upload_type,
+        user_id,
+        generate_thumbnail,
+    )
     return Result.success(
         UploadFileResponse(
             object_key=file_info.object_key,
             url=build_public_file_url(file_info.object_key),
+            processed_object_key=(
+                thumbnail_info.object_key if thumbnail_info is not None else None
+            ),
+            processed_url=(
+                build_public_file_url(thumbnail_info.object_key)
+                if thumbnail_info is not None
+                else None
+            ),
         )
     )

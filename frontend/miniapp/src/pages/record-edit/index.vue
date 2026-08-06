@@ -17,6 +17,7 @@ definePage({
 })
 
 interface EditableImage {
+  displayUrl: string
   previewUrl: string
   originalObjectKey?: string
   processedObjectKey?: string | null
@@ -189,7 +190,11 @@ const chooseImages = (sourceTypeOption?: 'camera' | 'album') => {
       // 部分 uni-app 平台声明单图结果为字符串，提交前统一成路径数组。
       const paths = Array.isArray(tempFilePaths) ? tempFilePaths : [tempFilePaths]
       const shouldUseTakenAt = !recordId.value && images.value.length === 0 && Boolean(paths[0])
-      images.value.push(...paths.map(path => ({ previewUrl: path, pendingPath: path })))
+      images.value.push(...paths.map(path => ({
+        displayUrl: path,
+        previewUrl: path,
+        pendingPath: path,
+      })))
       // 新增记录首次选图统一采用当前时间，避免读取原图元数据阻塞页面交互。
       if (shouldUseTakenAt)
         eatenAt.value = Date.now()
@@ -230,6 +235,8 @@ const loadRecord = async () => {
       }
     }
     images.value = record.images.map(image => ({
+      // 页面小图优先加载缩略图，点击预览时仍使用原图地址。
+      displayUrl: image.processed_url ?? image.original_url,
       previewUrl: image.original_url,
       originalObjectKey: image.original_object_key,
       processedObjectKey: image.processed_object_key,
@@ -254,7 +261,11 @@ onLoad((options) => {
   const imagePath = typeof options?.image === 'string' ? options.image : ''
   if (imagePath) {
     const decodedPath = decodeURIComponent(imagePath)
-    images.value.push({ previewUrl: decodedPath, pendingPath: decodedPath })
+    images.value.push({
+      displayUrl: decodedPath,
+      previewUrl: decodedPath,
+      pendingPath: decodedPath,
+    })
   }
 
   const takenAt = Number(options?.takenAt)
@@ -264,7 +275,11 @@ onLoad((options) => {
   const eventChannel = pageInstance?.getOpenerEventChannel?.()
   eventChannel?.once('selectedRecordImages', (payload: SelectedRecordImagesPayload) => {
     // 首页最多传入 9 张临时图片，新增页沿用现有图片列表和上传流程。
-    images.value.push(...payload.imagePaths.map(path => ({ previewUrl: path, pendingPath: path })))
+    images.value.push(...payload.imagePaths.map(path => ({
+      displayUrl: path,
+      previewUrl: path,
+      pendingPath: path,
+    })))
     eatenAt.value = payload.takenAt
   })
 })
@@ -281,8 +296,11 @@ const uploadImages = async () => {
   const payloadImages: MealRecordPayload['images'] = []
   for (const image of images.value) {
     if (image.pendingPath) {
-      const uploaded = await fileApi.uploadImage(image.pendingPath)
-      payloadImages.push({ original_object_key: uploaded.object_key, processed_object_key: null })
+      const uploaded = await fileApi.uploadRecordImage(image.pendingPath)
+      payloadImages.push({
+        original_object_key: uploaded.object_key,
+        processed_object_key: uploaded.processed_object_key,
+      })
     }
     else if (image.originalObjectKey) {
       payloadImages.push({
@@ -387,6 +405,8 @@ const confirmDelete = () => {
     title: '删除饮食记录',
     msg: '删除后无法恢复，确认删除吗？',
     confirmButtonText: '删除',
+    // 删除属于不可恢复操作，使用组件库危险按钮样式强化提示。
+    confirmButtonProps: { type: 'danger' },
     cancelButtonText: '取消',
     success: (result) => {
       if (result.action === 'confirm')
@@ -414,7 +434,7 @@ const confirmDelete = () => {
     <template v-else>
       <view class="relative mx-auto mt-4 w-[196px] rotate-[-1deg] bg-white p-2 pb-7 shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
         <view v-if="images[0]" class="relative h-[180px] w-full overflow-hidden bg-[#e5e3e0]" @click="previewImages(images[0].previewUrl)">
-          <image :src="images[0].previewUrl" mode="aspectFill" class="h-full w-full" />
+          <image :src="images[0].displayUrl" mode="aspectFill" class="h-full w-full" />
           <button class="absolute right-2 top-2 m-0 h-8 w-8 flex items-center justify-center border-0 rounded-full bg-black/50 p-0 after:border-0" aria-label="移除图片" @click.stop="removeImage(0)">
             <wd-icon name="close" size="16px" color="#ffffff" />
           </button>
@@ -433,7 +453,7 @@ const confirmDelete = () => {
 
       <view v-if="images.length" class="mx-5 mt-4 flex gap-2 overflow-x-auto">
         <view v-for="(image, index) in images.slice(1)" :key="image.previewUrl" class="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-[#e8e7e2]" @click="previewImages(image.previewUrl)">
-          <image :src="image.previewUrl" mode="aspectFill" class="h-full w-full" />
+          <image :src="image.displayUrl" mode="aspectFill" class="h-full w-full" />
           <button class="absolute right-0 top-0 m-0 h-5 w-5 flex items-center justify-center border-0 rounded-full bg-black/50 p-0 after:border-0" aria-label="移除图片" @click.stop="removeImage(index + 1)">
             <wd-icon name="close" size="11px" color="#ffffff" />
           </button>

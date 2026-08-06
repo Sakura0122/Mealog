@@ -49,7 +49,7 @@ class MealRecordImage(BaseTable):
     processed_object_key: Mapped[str | None] = mapped_column(
         String(512),
         nullable=True,
-        comment="自动抠图结果在对象存储中的文件键，未处理或处理失败时为空",
+        comment="缩略图在对象存储中的文件键，未生成时为空",
     )
     sort_order: Mapped[int] = mapped_column(
         TINYINT(unsigned=True),

@@ -24,6 +24,7 @@ const uploadImage = async (
   filePath: string,
   uploadType: ImageUploadType,
   failureMessage: string,
+  generateThumbnail = false,
 ): Promise<UploadFileResponse> => {
   const compressedFilePath = await compressImage(filePath)
   return withAuthRetry(() => {
@@ -32,7 +33,10 @@ const uploadImage = async (
         url: `${apiBaseUrl}/api/files/upload`,
         filePath: compressedFilePath,
         name: 'file',
-        formData: { type: uploadType },
+        formData: {
+          type: uploadType,
+          generate_thumbnail: generateThumbnail ? 'true' : 'false',
+        },
         header: getAuthorizationHeader(),
         success: (response) => {
           try {
@@ -52,6 +56,10 @@ const uploadImage = async (
 export const fileApi = {
   uploadImage(filePath: string): Promise<UploadFileResponse> {
     return uploadImage(filePath, 'images', '图片上传失败，请稍后重试')
+  },
+  uploadRecordImage(filePath: string): Promise<UploadFileResponse> {
+    // 饮食记录列表会使用缩略图，菜谱封面等普通图片无需额外生成副本。
+    return uploadImage(filePath, 'images', '图片上传失败，请稍后重试', true)
   },
   uploadAvatar(filePath: string): Promise<UploadFileResponse> {
     return uploadImage(filePath, 'avatar', '头像上传失败，请稍后重试')
