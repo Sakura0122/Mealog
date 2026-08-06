@@ -115,7 +115,7 @@ const saveRecipe = async () => {
 
 <template>
   <view class="min-h-screen bg-[#fcf9f6] pb-8">
-    <AppTopBar close />
+    <AppTopBar />
 
     <view v-if="loading" class="h-96 flex items-center justify-center">
       <wd-loading text="加载菜谱中" color="#71836b" />

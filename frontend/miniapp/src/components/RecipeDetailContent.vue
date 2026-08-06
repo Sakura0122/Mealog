@@ -15,14 +15,13 @@ withDefaults(defineProps<{
 const emit = defineEmits<{
   action: []
   edit: []
-  more: []
 }>()
 </script>
 
 <template>
   <view class="min-h-screen bg-[#fcf9f6] pb-8">
     <!-- 分享预览没有返回入口，保留关闭按钮；普通详情页避免与返回按钮重复。 -->
-    <AppTopBar :show-back="!shared" :edit="!shared" :more="!shared" :close="shared" @edit="emit('edit')" @more="emit('more')" />
+    <AppTopBar :show-back="!shared" :edit="!shared" :close="shared" @edit="emit('edit')" />
 
     <view class="mx-auto mt-3 w-[280px] rotate-1 bg-white p-3 pb-8 shadow-[0_5px_12px_rgba(0,0,0,0.12)]">
       <image v-if="recipe.cover_url" :src="recipe.cover_url" mode="aspectFill" class="h-[256px] w-full" />
@@ -69,5 +68,6 @@ const emit = defineEmits<{
     <button :open-type="actionOpenType" class="mx-5 mt-6 h-14 flex items-center justify-center border-0 rounded-full text-base font-medium shadow-[0_6px_12px_rgba(0,0,0,0.1)] after:border-0" :class="shared ? 'bg-[#d5e8cb] text-[#24331f]' : 'bg-[#ffd29a] text-[#343021]'" @click="emit('action')">
       {{ actionLabel || (shared ? '保存至我的菜谱' : '分享我的菜谱') }}
     </button>
+    <slot />
   </view>
 </template>

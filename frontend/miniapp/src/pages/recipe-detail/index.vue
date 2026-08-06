@@ -42,8 +42,6 @@ const editRecipe = () => {
   uni.navigateTo({ url: `/pages/recipe-create/index?id=${recipeId.value}` })
 }
 
-const showActions = ref(false)
-const actions = [{ name: '删除菜谱', color: '#d14343' }]
 const deleting = ref(false)
 const removeRecipe = async () => {
   deleting.value = true
@@ -62,7 +60,6 @@ const removeRecipe = async () => {
 }
 
 const confirmDelete = () => {
-  showActions.value = false
   useGlobalDialog().confirm({
     title: '删除菜谱',
     msg: '删除后无法在菜谱列表中恢复，确认删除吗？',
@@ -112,12 +109,10 @@ onShareAppMessage(async () => {
   </view>
 
   <template v-else-if="recipe">
-    <RecipeDetailContent :recipe="recipe" action-open-type="share" @edit="editRecipe" @more="showActions = true" />
-    <wd-action-sheet v-model="showActions" :actions="actions" cancel-text="取消" root-portal @select="confirmDelete" />
-    <view v-if="deleting" class="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
-      <view class="rounded-lg bg-white px-6 py-4 shadow-lg">
-        <wd-loading text="正在删除" color="#71836b" />
-      </view>
-    </view>
+    <RecipeDetailContent :recipe="recipe" action-open-type="share" @edit="editRecipe">
+      <button :disabled="deleting" class="mx-auto mt-4 block border-0 bg-transparent p-0 text-sm text-[#8f8f8a] after:border-0 disabled:opacity-60" @click="confirmDelete">
+        {{ deleting ? '删除中' : '删除菜谱' }}
+      </button>
+    </RecipeDetailContent>
   </template>
 </template>

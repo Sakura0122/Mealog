@@ -311,10 +311,10 @@ const saveRecord = async () => {
         recipeId = existingRecipe.id
       }
       else {
-        // 手动输入的新菜品先创建为草稿菜谱，再关联到本次饮食记录。
+        // 手动输入的新菜品先创建为草稿菜谱，并复用记录首图作为菜谱封面。
         const createdRecipe = await recipeApi.create({
           name: normalizedDishName,
-          cover_object_key: null,
+          cover_object_key: payloadImages[0]?.original_object_key ?? null,
           ingredients: [],
           steps: null,
         })
@@ -511,7 +511,7 @@ const confirmDelete = () => {
       </button>
     </template>
 
-    <wd-datetime-picker v-model="eatenAt" v-model:visible="showDatePicker" :z-index="100" type="datetime" title="选择进食时间" root-portal />
+    <wd-datetime-picker v-model="eatenAt" v-model:visible="showDatePicker" :z-index="100" type="datetime" title="选择享用时间" root-portal />
 
     <wd-popup v-model="showStorePicker" position="bottom" round safe-area-inset-bottom root-portal custom-style="max-height: 75vh; background: #fcf9f6;">
       <view class="px-5 pb-5 pt-4">
