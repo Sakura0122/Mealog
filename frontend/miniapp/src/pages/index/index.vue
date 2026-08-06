@@ -25,6 +25,7 @@ const recordedDays = ref(0)
 const records = ref<MealRecordListItem[]>([])
 const loading = ref(false)
 const loadError = ref('')
+const homeLoaded = ref(false)
 let requestSequence = 0
 
 const monthText = computed(() => {
@@ -54,11 +55,11 @@ const selectedDateText = computed(() => {
   return `${Number(month)}月${Number(day)}日记录`
 })
 
-const loadHome = async () => {
+const loadHome = async (silent = false) => {
   const sequence = ++requestSequence
   const month = formatMonthParam(monthDate.value)
   const targetDate = selectedDate.value
-  loading.value = true
+  loading.value = !silent
   loadError.value = ''
   try {
     const [calendar, recordPage] = await Promise.all([
@@ -72,10 +73,15 @@ const loadHome = async () => {
     monthTotal.value = calendar.total
     recordedDays.value = calendar.recorded_days
     records.value = recordPage.list
+    homeLoaded.value = true
   }
   catch (error) {
-    if (sequence === requestSequence)
-      loadError.value = getErrorMessage(error)
+    if (sequence === requestSequence) {
+      if (silent)
+        useGlobalToast().error(getErrorMessage(error))
+      else
+        loadError.value = getErrorMessage(error)
+    }
   }
   finally {
     if (sequence === requestSequence)
@@ -90,7 +96,8 @@ onShow(() => {
     skipNextHomeLoad.value = false
     return
   }
-  loadHome()
+  // 从新增或编辑页返回时保留现有图片，数据在后台刷新后按记录 ID 更新。
+  loadHome(homeLoaded.value)
 })
 
 const changeMonth = (offset: number) => {
@@ -127,7 +134,10 @@ const getDefaultEatenAt = () => {
   return new Date(year, month - 1, day, 12).getTime()
 }
 
-const chooseRecordImage = (sourceType: 'camera' | 'album') => {
+const chooseRecordImage = async (sourceType: 'camera' | 'album') => {
+  // 打开原生相册或相机前先收起来源弹层，避免临时图片准备期间弹层短暂回显。
+  showSourcePicker.value = false
+  await nextTick()
   skipNextHomeLoad.value = true
   uni.chooseImage({
     count: 9,
@@ -138,7 +148,6 @@ const chooseRecordImage = (sourceType: 'camera' | 'album') => {
       const imagePaths = Array.isArray(tempFilePaths) ? tempFilePaths : [tempFilePaths]
       if (!imagePaths[0])
         return
-      showSourcePicker.value = false
       uni.navigateTo({
         url: '/pages/record-edit/index',
         success: ({ eventChannel }) => {
@@ -243,7 +252,7 @@ const openRecordEditor = (recordId: string) => {
         </view>
         <view v-else-if="loadError" class="py-8 text-center">
           <wd-empty icon="warning" :tip="loadError" />
-          <button class="mx-auto mt-3 border-0 rounded-full bg-[#d5e8cb] px-5 py-2 text-sm after:border-0" @click="loadHome">
+          <button class="mx-auto mt-3 border-0 rounded-full bg-[#d5e8cb] px-5 py-2 text-sm after:border-0" @click="loadHome()">
             重新加载
           </button>
         </view>

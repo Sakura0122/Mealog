@@ -64,6 +64,8 @@ const confirmDelete = () => {
     title: '删除菜谱',
     msg: '删除后无法在菜谱列表中恢复，确认删除吗？',
     confirmButtonText: '删除',
+    // 删除属于不可恢复操作，使用组件库危险按钮样式强化提示。
+    confirmButtonProps: { type: 'danger' },
     cancelButtonText: '取消',
     success: (result) => {
       if (result.action === 'confirm')

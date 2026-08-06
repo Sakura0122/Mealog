@@ -294,6 +294,25 @@ const uploadImages = async () => {
   return payloadImages
 }
 
+const returnHome = (message: string) => {
+  // 首页仍在页面栈时直接返回，保留已加载图片；分享等冷启动场景再重建首页。
+  if (getCurrentPages().length > 1) {
+    uni.navigateBack({
+      success: () => useGlobalToast().success(message),
+      fail: () => uni.reLaunch({
+        url: '/pages/index/index',
+        success: () => useGlobalToast().success(message),
+      }),
+    })
+    return
+  }
+
+  uni.reLaunch({
+    url: '/pages/index/index',
+    success: () => useGlobalToast().success(message),
+  })
+}
+
 const saveRecord = async () => {
   const normalizedDishName = dishName.value.trim()
   if (!normalizedDishName) {
@@ -338,11 +357,7 @@ const saveRecord = async () => {
     else
       await mealRecordApi.create(payload)
 
-    // 保存后清空当前页面栈，确保新增、编辑都直接回到首页。
-    uni.reLaunch({
-      url: '/pages/index/index',
-      success: () => useGlobalToast().success(isEditing ? '饮食记录已更新' : '饮食记录已保存'),
-    })
+    returnHome(isEditing ? '饮食记录已更新' : '饮食记录已保存')
   }
   catch (error) {
     useGlobalToast().error(getErrorMessage(error))
@@ -357,10 +372,7 @@ const removeRecord = async () => {
   deleting.value = true
   try {
     await mealRecordApi.remove(recordId.value)
-    uni.reLaunch({
-      url: '/pages/index/index',
-      success: () => useGlobalToast().success('饮食记录已删除'),
-    })
+    returnHome('饮食记录已删除')
   }
   catch (error) {
     useGlobalToast().error(getErrorMessage(error))
@@ -533,32 +545,37 @@ const confirmDelete = () => {
           <input v-model="storeKeyword" class="ml-3 min-w-0 flex-1 text-sm text-[#1c1c1a]" placeholder="搜索吃过的店铺" placeholder-class="text-[#a5a59f]">
         </view>
 
-        <view v-if="storesLoading" class="h-48 flex items-center justify-center">
-          <wd-loading text="加载历史店铺" color="#71836b" />
-        </view>
-        <view v-else-if="storesError" class="py-10 text-center">
-          <wd-empty icon="warning" :tip="storesError" />
-          <button class="mx-auto mt-3 border-0 rounded-full bg-[#d5e8cb] px-5 py-2 text-sm after:border-0" @click="loadStores">
-            重新加载
-          </button>
-        </view>
-        <wd-empty v-else-if="stores.length === 0" custom-class="mt-8" icon="location" :tip="storeKeyword ? '没有找到相关店铺' : '还没有历史店铺，可从地图选择'" />
-        <scroll-view v-else scroll-y class="mt-3 max-h-[48vh]">
-          <button v-for="store in stores" :key="store.id" class="m-0 min-h-[64px] w-full flex items-center border-0 border-b border-[#ebe8e4] bg-transparent py-3 text-left after:border-0" @click="chooseStore(store)">
-            <wd-icon name="store" size="20px" color="#5c6949" />
-            <view class="ml-3 min-w-0 flex-1">
-              <text class="block truncate text-sm text-[#1c1c1a] font-medium">
-                {{ store.name }}
+        <!-- 搜索状态共用固定高度，避免内容切换导致底部弹层上下跳动。 -->
+        <view class="mt-3 h-[48vh]">
+          <view v-if="storesLoading" class="h-full flex items-center justify-center">
+            <wd-loading text="加载历史店铺" color="#71836b" />
+          </view>
+          <view v-else-if="storesError" class="h-full flex flex-col items-center justify-center text-center">
+            <wd-empty icon="warning" :tip="storesError" />
+            <button class="mt-3 border-0 rounded-full bg-[#d5e8cb] px-5 py-2 text-sm after:border-0" @click="loadStores">
+              重新加载
+            </button>
+          </view>
+          <view v-else-if="stores.length === 0" class="h-full flex items-center justify-center">
+            <wd-empty icon="location" :tip="storeKeyword ? '没有找到相关店铺' : '还没有历史店铺，可从地图选择'" />
+          </view>
+          <scroll-view v-else scroll-y class="h-full">
+            <button v-for="store in stores" :key="store.id" class="m-0 min-h-[64px] w-full flex items-center border-0 border-b border-[#ebe8e4] bg-transparent py-3 text-left after:border-0" @click="chooseStore(store)">
+              <wd-icon name="store" size="20px" color="#5c6949" />
+              <view class="ml-3 min-w-0 flex-1">
+                <text class="block truncate text-sm text-[#1c1c1a] font-medium">
+                  {{ store.name }}
+                </text>
+                <text v-if="store.address" class="mt-1 block truncate text-[10px] text-[#777973]">
+                  {{ store.address }}
+                </text>
+              </view>
+              <text class="ml-3 text-[10px] text-[#777973]">
+                吃过 {{ store.usage_count }} 次
               </text>
-              <text v-if="store.address" class="mt-1 block truncate text-[10px] text-[#777973]">
-                {{ store.address }}
-              </text>
-            </view>
-            <text class="ml-3 text-[10px] text-[#777973]">
-              吃过 {{ store.usage_count }} 次
-            </text>
-          </button>
-        </scroll-view>
+            </button>
+          </scroll-view>
+        </view>
       </view>
     </wd-popup>
   </view>

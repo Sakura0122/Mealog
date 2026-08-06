@@ -184,7 +184,8 @@ const saveRecipe = async () => {
                 <wd-icon name="close" size="12px" color="#737b66" />
               </button>
             </view>
-            <input v-model="ingredientDraft" confirm-hold confirm-type="done" class="h-8 min-w-[96px] flex-1 text-base text-[#1c1c1a]" placeholder="食材" placeholder-class="text-[#c7c7c1]" @confirm="addIngredient">
+            <!-- 已有食材时隐藏占位文案，避免标签后重复出现“食材”提示。 -->
+            <input v-model="ingredientDraft" confirm-hold confirm-type="done" class="h-8 min-w-[96px] flex-1 text-base text-[#1c1c1a]" :placeholder="ingredientItems.length ? '' : '食材，录入一种食材后按回车键继续录入'" placeholder-class="text-[#c7c7c1]" @confirm="addIngredient">
           </view>
         </view>
         <!-- 步骤保留紧凑的初始高度，并随多行内容自动增高。 -->
