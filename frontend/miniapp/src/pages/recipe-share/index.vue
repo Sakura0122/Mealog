@@ -69,14 +69,14 @@ onShareAppMessage(() => ({
 
 <template>
   <view v-if="loading && !recipe" class="min-h-screen bg-[#fcf9f6]">
-    <AppTopBar close :show-back="false" />
+    <AppTopBar home :show-back="false" />
     <view class="h-96 flex items-center justify-center">
       <wd-loading text="加载分享菜谱中" color="#71836b" />
     </view>
   </view>
 
   <view v-else-if="loadError && !recipe" class="min-h-screen bg-[#fcf9f6]">
-    <AppTopBar close :show-back="false" />
+    <AppTopBar home :show-back="false" />
     <view class="py-20 text-center">
       <wd-empty icon="warning" :tip="loadError" />
       <button v-if="recipeId" class="mx-auto mt-4 border-0 rounded-full bg-[#d5e8cb] px-6 py-2 text-sm text-[#24331f] after:border-0" @click="loadRecipe">

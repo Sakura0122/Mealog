@@ -31,8 +31,8 @@ const previewCover = () => {
 
 <template>
   <view class="min-h-screen bg-[#fcf9f6] pb-8">
-    <!-- 分享预览没有返回入口，保留关闭按钮；普通详情页避免与返回按钮重复。 -->
-    <AppTopBar :show-back="!shared" :edit="!shared" :close="shared" @edit="emit('edit')" />
+    <!-- 分享页从左侧直接返回首页；普通详情页保留返回和编辑入口。 -->
+    <AppTopBar :show-back="!shared" :edit="!shared" :home="shared" @edit="emit('edit')" />
 
     <view class="mx-auto mt-3 w-[280px] rotate-1 bg-white p-3 pb-8 shadow-[0_5px_12px_rgba(0,0,0,0.12)]">
       <button v-if="recipe.cover_url" class="m-0 h-[256px] w-full border-0 bg-transparent p-0 after:border-0" aria-label="查看封面大图" @click="previewCover">

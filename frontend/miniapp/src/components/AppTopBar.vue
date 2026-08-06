@@ -1,12 +1,10 @@
 <script setup lang="ts">
 withDefaults(defineProps<{
-  close?: boolean
   edit?: boolean
   home?: boolean
   more?: boolean
   showBack?: boolean
 }>(), {
-  close: false,
   edit: false,
   home: false,
   more: false,
@@ -20,7 +18,7 @@ const emit = defineEmits<{
 
 const goBack = () => {
   uni.navigateBack({
-    // 分享卡片冷启动时没有上一页，关闭后应回到应用首页。
+    // 页面栈异常时回到首页，避免返回操作停留在空白页。
     fail: () => uni.reLaunch({ url: '/pages/index/index' }),
   })
 }
@@ -56,9 +54,6 @@ rightInset.value = systemInfo.windowWidth - menuButtonRect.left
         </button>
         <button v-if="more" class="m-0 h-8 w-8 flex items-center justify-center border-0 bg-transparent p-0 after:border-0" aria-label="更多" @click="emit('more')">
           <wd-icon name="more-vertical" size="21px" color="#5d5d5b" />
-        </button>
-        <button v-if="close" class="m-0 h-8 w-8 flex items-center justify-center border-0 bg-transparent p-0 after:border-0" aria-label="关闭" @click="goBack">
-          <wd-icon name="close" size="21px" color="#1c1c1a" />
         </button>
       </view>
     </template>
