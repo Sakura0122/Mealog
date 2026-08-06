@@ -36,7 +36,7 @@ const previewCover = () => {
 
     <view class="mx-auto mt-3 w-[280px] rotate-1 bg-white p-3 pb-8 shadow-[0_5px_12px_rgba(0,0,0,0.12)]">
       <button v-if="recipe.cover_url" class="m-0 h-[256px] w-full border-0 bg-transparent p-0 after:border-0" aria-label="查看封面大图" @click="previewCover">
-        <image :src="recipe.cover_processed_url ?? recipe.cover_url" mode="aspectFill" class="h-full w-full" />
+        <image :src="recipe.cover_thumbnail_url ?? recipe.cover_url" mode="aspectFill" class="h-full w-full" />
       </button>
       <view v-else class="h-[256px] w-full flex flex-col items-center justify-center bg-[#e5e3e0] text-[#4f5650]">
         <wd-icon name="book" size="42px" color="#4f5650" />

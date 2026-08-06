@@ -23,7 +23,7 @@ from src.api.stores.model import Store
 from src.common.exceptions import BusinessException
 from src.common.page import PageRequest, PageResult
 from src.common.result_code import ResultCodeEnum
-from src.rustfs.url import build_public_file_url
+from src.rustfs.url import build_public_file_url, build_thumbnail_object_key
 from src.utils.datetime import get_date_range, get_month_range
 
 
@@ -155,9 +155,7 @@ async def get_meal_record_calendar(
         day_counts[record_date] = day_counts.get(record_date, 0) + 1
         cover_image = cover_images.get(record_id)
         if record_date not in day_cover_urls and cover_image is not None:
-            # 老记录没有缩略图时回退原图，保证历史数据仍可正常展示。
-            cover_object_key = cover_image.processed_object_key or cover_image.original_object_key
-            day_cover_urls[record_date] = build_public_file_url(cover_object_key)
+            day_cover_urls[record_date] = _build_thumbnail_url(cover_image.original_object_key)
 
     # 4. 按日期升序组装月历响应
     days = [
@@ -295,15 +293,10 @@ async def _validate_relations(
 
     user_id_value = str(user_id)
     original_prefix = f"uploads/user/{user_id_value}/images/"
-    thumbnail_prefix = f"uploads/user/{user_id_value}/thumbnails/"
     for image in payload.images:
         # 图片键必须位于当前用户目录，不能信任客户端提交的其他用户对象键。
         if not image.original_object_key.startswith(original_prefix):
             raise BusinessException(ResultCodeEnum.PARAM_ERROR, "记录图片不存在或无权限")
-        if image.processed_object_key is not None and not image.processed_object_key.startswith(
-            thumbnail_prefix
-        ):
-            raise BusinessException(ResultCodeEnum.PARAM_ERROR, "记录缩略图不存在或无权限")
 
     if payload.store_id is not None:
         store = await session.scalar(
@@ -361,7 +354,6 @@ def _create_images(record_id: str, images: list[MealRecordImageInput]) -> list[M
         MealRecordImage(
             meal_record_id=record_id,
             original_object_key=image.original_object_key,
-            processed_object_key=image.processed_object_key,
             sort_order=index,
             is_cover=index == 0,
         )
@@ -399,12 +391,7 @@ def _to_image_response(image: MealRecordImage) -> MealRecordImageResponse:
         id=image.id,
         original_object_key=image.original_object_key,
         original_url=build_public_file_url(image.original_object_key),
-        processed_object_key=image.processed_object_key,
-        processed_url=(
-            build_public_file_url(image.processed_object_key)
-            if image.processed_object_key is not None
-            else None
-        ),
+        thumbnail_url=_build_thumbnail_url(image.original_object_key),
         sort_order=image.sort_order,
         is_cover=image.is_cover,
     )
@@ -462,13 +449,18 @@ def _to_list_item_response(
         eaten_at=record.eaten_at,
         note=record.note,
         cover_url=(
-            build_public_file_url(
-                cover_image.processed_object_key or cover_image.original_object_key
-            )
+            _build_thumbnail_url(cover_image.original_object_key)
             if cover_image is not None
             else None
         ),
     )
+
+
+def _build_thumbnail_url(object_key: str) -> str:
+    """根据原图 key 派生缩略图地址，无法匹配图片目录时回退原图。"""
+
+    thumbnail_object_key = build_thumbnail_object_key(object_key)
+    return build_public_file_url(thumbnail_object_key or object_key)
 
 
 async def _get_record_images(

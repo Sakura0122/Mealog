@@ -32,7 +32,6 @@ const removeIngredient = (index: number) => {
 const steps = ref('')
 
 const coverObjectKey = ref<string | null>(null)
-const coverProcessedObjectKey = ref<string | null>(null)
 const coverPreviewUrl = ref('')
 const pendingCoverPath = ref('')
 const loadRecipe = async () => {
@@ -44,8 +43,7 @@ const loadRecipe = async () => {
     ingredientItems.value = [...recipe.ingredients]
     steps.value = recipe.steps ?? ''
     coverObjectKey.value = recipe.cover_object_key
-    coverProcessedObjectKey.value = recipe.cover_processed_object_key
-    coverPreviewUrl.value = recipe.cover_processed_url ?? recipe.cover_url ?? ''
+    coverPreviewUrl.value = recipe.cover_url ?? ''
   }
   catch (error) {
     loadError.value = getErrorMessage(error)
@@ -79,7 +77,6 @@ const chooseCover = () => {
 
 const removeCover = () => {
   coverObjectKey.value = null
-  coverProcessedObjectKey.value = null
   coverPreviewUrl.value = ''
   pendingCoverPath.value = ''
 }
@@ -88,13 +85,11 @@ const saving = ref(false)
 
 const buildPayload = (
   coverKey: string | null,
-  coverProcessedKey: string | null,
 ): RecipePayload => {
   const pendingIngredient = ingredientDraft.value.trim()
   return {
     name: recipeName.value.trim(),
     cover_object_key: coverKey,
-    cover_processed_object_key: coverProcessedKey,
     // 未按回车确认的最后一项也随表单提交，避免用户输入丢失。
     ingredients: pendingIngredient
       ? [...ingredientItems.value, pendingIngredient]
@@ -112,14 +107,12 @@ const saveRecipe = async () => {
   saving.value = true
   try {
     let coverKey = coverObjectKey.value
-    let coverProcessedKey = coverProcessedObjectKey.value
     if (pendingCoverPath.value) {
       const uploadedCover = await fileApi.uploadImageWithThumbnail(pendingCoverPath.value)
       coverKey = uploadedCover.object_key
-      coverProcessedKey = uploadedCover.processed_object_key
     }
 
-    const payload = buildPayload(coverKey, coverProcessedKey)
+    const payload = buildPayload(coverKey)
     if (recipeId.value)
       await recipeApi.update(recipeId.value, payload)
     else

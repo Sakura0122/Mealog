@@ -3,7 +3,6 @@ export type RecipeStatus = 'DRAFT' | 'COMPLETED'
 
 export interface MealRecordImageInput {
   original_object_key: string
-  processed_object_key: string | null
 }
 
 export interface MealRecordPayload {
@@ -52,7 +51,7 @@ export interface MealRecordCalendar {
 export interface MealRecordImage extends MealRecordImageInput {
   id: string
   original_url: string
-  processed_url: string | null
+  thumbnail_url: string
   sort_order: number
   is_cover: boolean
 }

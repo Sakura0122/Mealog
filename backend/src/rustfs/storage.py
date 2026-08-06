@@ -22,14 +22,18 @@ def build_object_key(filename: str, object_prefix: str) -> str:
     return f"{object_prefix}/{uuid4().hex}{suffix}"
 
 
-def upload_file_to_rustfs(file: UploadFile, object_prefix: str) -> RustFSFileInfo:
+def upload_file_to_rustfs(
+    file: UploadFile,
+    object_prefix: str,
+    object_key: str | None = None,
+) -> RustFSFileInfo:
     settings = get_settings()
     client = get_rustfs_client()
 
     ensure_bucket(client, settings)
 
     filename = file.filename or "file"
-    object_key = build_object_key(filename, object_prefix)
+    object_key = object_key or build_object_key(filename, object_prefix)
     extra_args = {"ContentType": file.content_type} if file.content_type else None
     client.upload_fileobj(
         file.file,

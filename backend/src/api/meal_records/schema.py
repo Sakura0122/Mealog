@@ -17,12 +17,6 @@ class MealRecordImageInput(BaseModel):
         max_length=512,
         description="原始图片在对象存储中的文件键",
     )
-    processed_object_key: str | None = Field(
-        default=None,
-        min_length=1,
-        max_length=512,
-        description="缩略图在对象存储中的文件键，未生成时为空",
-    )
 
 
 class MealRecordPayload(BaseModel):
@@ -88,8 +82,7 @@ class MealRecordImageResponse(BaseModel):
     id: str = Field(description="图片记录 ID")
     original_object_key: str = Field(description="原始图片在对象存储中的文件键")
     original_url: str = Field(description="原始图片公开访问地址")
-    processed_object_key: str | None = Field(description="缩略图在对象存储中的文件键，未生成时为空")
-    processed_url: str | None = Field(description="缩略图公开访问地址，未生成时为空")
+    thumbnail_url: str = Field(description="根据原图 key 派生的缩略图公开访问地址")
     sort_order: int = Field(description="图片展示顺序，从 0 开始")
     is_cover: bool = Field(description="是否为当前饮食记录的封面")
 

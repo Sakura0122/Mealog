@@ -10,6 +10,7 @@ from src.common.exceptions import BusinessException
 from src.common.result_code import ResultCodeEnum
 from src.core.config import get_settings
 from src.rustfs.storage import RustFSFileInfo, upload_file_to_rustfs
+from src.rustfs.url import build_thumbnail_object_key
 
 UploadType = Literal["avatar", "images", "files"]
 IMAGE_QUALITY = 80
@@ -86,9 +87,10 @@ def upload_file(
             f"uploads/user/{user_id}/{upload_type}",
         )
         thumbnail_info = (
-            upload_file_to_rustfs(
+            _upload_thumbnail(
                 thumbnail_target,
-                f"uploads/user/{user_id}/thumbnails",
+                file_info.object_key,
+                user_id,
             )
             if thumbnail_target is not None
             else None
@@ -99,3 +101,20 @@ def upload_file(
             upload_target.file.close()
         if thumbnail_target is not None:
             thumbnail_target.file.close()
+
+
+def _upload_thumbnail(
+    thumbnail: UploadFile,
+    original_object_key: str,
+    user_id: UUID,
+) -> RustFSFileInfo:
+    """以原图文件名派生缩略图 key，避免将缩略图 key 写入业务表。"""
+
+    thumbnail_object_key = build_thumbnail_object_key(original_object_key)
+    if thumbnail_object_key is None:
+        raise BusinessException(ResultCodeEnum.PARAM_ERROR, "无法生成图片缩略图路径")
+    return upload_file_to_rustfs(
+        thumbnail,
+        f"uploads/user/{user_id}/thumbnails",
+        object_key=thumbnail_object_key,
+    )

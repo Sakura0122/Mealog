@@ -20,7 +20,6 @@ interface EditableImage {
   displayUrl: string
   previewUrl: string
   originalObjectKey?: string
-  processedObjectKey?: string | null
   pendingPath?: string
 }
 
@@ -236,10 +235,9 @@ const loadRecord = async () => {
     }
     images.value = record.images.map(image => ({
       // 页面小图优先加载缩略图，点击预览时仍使用原图地址。
-      displayUrl: image.processed_url ?? image.original_url,
+      displayUrl: image.thumbnail_url,
       previewUrl: image.original_url,
       originalObjectKey: image.original_object_key,
-      processedObjectKey: image.processed_object_key,
     }))
   }
   catch (error) {
@@ -299,13 +297,11 @@ const uploadImages = async () => {
       const uploaded = await fileApi.uploadImageWithThumbnail(image.pendingPath)
       payloadImages.push({
         original_object_key: uploaded.object_key,
-        processed_object_key: uploaded.processed_object_key,
       })
     }
     else if (image.originalObjectKey) {
       payloadImages.push({
         original_object_key: image.originalObjectKey,
-        processed_object_key: image.processedObjectKey ?? null,
       })
     }
   }
@@ -352,7 +348,6 @@ const saveRecord = async () => {
         const createdRecipe = await recipeApi.create({
           name: normalizedDishName,
           cover_object_key: payloadImages[0]?.original_object_key ?? null,
-          cover_processed_object_key: payloadImages[0]?.processed_object_key ?? null,
           ingredients: [],
           steps: null,
         })

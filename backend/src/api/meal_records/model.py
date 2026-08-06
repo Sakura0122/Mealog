@@ -46,11 +46,6 @@ class MealRecordImage(BaseTable):
     original_object_key: Mapped[str] = mapped_column(
         String(512), nullable=False, comment="原始图片在对象存储中的文件键"
     )
-    processed_object_key: Mapped[str | None] = mapped_column(
-        String(512),
-        nullable=True,
-        comment="缩略图在对象存储中的文件键，未生成时为空",
-    )
     sort_order: Mapped[int] = mapped_column(
         TINYINT(unsigned=True),
         nullable=False,

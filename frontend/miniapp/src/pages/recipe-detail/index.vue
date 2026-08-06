@@ -87,7 +87,7 @@ onShareAppMessage(async () => {
   return {
     title: recipe.value ? `${recipe.value.name} - Mealog 菜谱` : 'Mealog 菜谱',
     path: `/pages/recipe-share/index?id=${recipeId.value}`,
-    imageUrl: recipe.value?.cover_processed_url ?? recipe.value?.cover_url ?? undefined,
+    imageUrl: recipe.value?.cover_thumbnail_url ?? recipe.value?.cover_url ?? undefined,
   }
 })
 </script>

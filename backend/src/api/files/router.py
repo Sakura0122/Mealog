@@ -6,7 +6,7 @@ from src.api.files.schema import UploadFileResponse
 from src.api.files.service import UploadType, upload_file
 from src.common.result import Result
 from src.core.dependencies import CurrentUserIdDep
-from src.rustfs.url import build_public_file_url
+from src.rustfs.url import build_public_file_url, build_thumbnail_object_key
 
 router = APIRouter(prefix="/files", tags=["文件"])
 
@@ -26,7 +26,7 @@ def upload_user_file(
     ],
     generate_thumbnail: Annotated[
         bool,
-        Form(description="是否同时生成饮食记录缩略图"),
+        Form(description="是否同时生成缩略图"),
     ] = False,
 ) -> Result[UploadFileResponse]:
     file_info, thumbnail_info = upload_file(
@@ -39,11 +39,10 @@ def upload_user_file(
         UploadFileResponse(
             object_key=file_info.object_key,
             url=build_public_file_url(file_info.object_key),
-            processed_object_key=(
-                thumbnail_info.object_key if thumbnail_info is not None else None
-            ),
-            processed_url=(
-                build_public_file_url(thumbnail_info.object_key)
+            thumbnail_url=(
+                build_public_file_url(
+                    build_thumbnail_object_key(file_info.object_key) or file_info.object_key
+                )
                 if thumbnail_info is not None
                 else None
             ),

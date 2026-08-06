@@ -48,18 +48,17 @@ CREATE TABLE IF NOT EXISTS `stores`
 -- 菜谱表：保存用户的菜谱草稿和已完善菜谱，并记录从分享菜谱复制时的来源关系。
 CREATE TABLE IF NOT EXISTS `recipes`
 (
-    `id`                         CHAR(36)     NOT NULL COMMENT '菜谱主键 UUID',
-    `user_id`                    CHAR(36)     NOT NULL COMMENT '菜谱所属用户 UUID',
-    `source_recipe_id`           CHAR(36)     NULL COMMENT '从分享页保存时对应的原菜谱 UUID，自建菜谱为空',
-    `name`                       VARCHAR(100) NOT NULL COMMENT '菜谱名称，同一用户下不可重复',
-    `cover_object_key`           VARCHAR(512) NULL COMMENT '菜谱封面在对象存储中的文件键',
-    `cover_processed_object_key` VARCHAR(512) NULL COMMENT '菜谱封面缩略图在对象存储中的文件键，未生成时为空',
-    `steps`                      TEXT         NULL COMMENT '菜谱制作步骤',
-    `status`                     VARCHAR(20)  NOT NULL DEFAULT 'DRAFT' COMMENT '菜谱状态：DRAFT 草稿，COMPLETED 已完善，由应用层根据食材和步骤计算并校验',
-    `share_expires_at`           DATETIME(3)  NULL COMMENT '分享过期时间，为空或早于当前时间表示不可访问',
-    `created_at`                 DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
-    `updated_at`                 DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
-    `deleted_at`                 DATETIME(3)  NULL COMMENT '软删除时间，为空表示未删除',
+    `id`               CHAR(36)     NOT NULL COMMENT '菜谱主键 UUID',
+    `user_id`          CHAR(36)     NOT NULL COMMENT '菜谱所属用户 UUID',
+    `source_recipe_id` CHAR(36)     NULL COMMENT '从分享页保存时对应的原菜谱 UUID，自建菜谱为空',
+    `name`             VARCHAR(100) NOT NULL COMMENT '菜谱名称，同一用户下不可重复',
+    `cover_object_key` VARCHAR(512) NULL COMMENT '菜谱封面在对象存储中的文件键',
+    `steps`            TEXT         NULL COMMENT '菜谱制作步骤',
+    `status`           VARCHAR(20)  NOT NULL DEFAULT 'DRAFT' COMMENT '菜谱状态：DRAFT 草稿，COMPLETED 已完善，由应用层根据食材和步骤计算并校验',
+    `share_expires_at` DATETIME(3)  NULL COMMENT '分享过期时间，为空或早于当前时间表示不可访问',
+    `created_at`       DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    `updated_at`       DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
+    `deleted_at`       DATETIME(3)  NULL COMMENT '软删除时间，为空表示未删除',
     PRIMARY KEY (`id`),
     KEY `idx_recipes_user_deleted_name` (`user_id`, `deleted_at`, `name`),
     KEY `idx_recipes_user_deleted_status_updated` (`user_id`, `deleted_at`, `status`, `updated_at`),
@@ -111,13 +110,12 @@ CREATE TABLE IF NOT EXISTS `meal_records`
   COLLATE = utf8mb4_0900_ai_ci
     COMMENT = '饮食记录表，保存单道菜品的时间、来源、关联和备注';
 
--- 饮食记录图片表：保存一条饮食记录的原图、缩略图、封面标记和展示顺序。
+-- 饮食记录图片表：保存一条饮食记录的原图、可选抠图结果、封面标记和展示顺序。
 CREATE TABLE IF NOT EXISTS `meal_record_images`
 (
     `id`                   CHAR(36)         NOT NULL COMMENT '饮食记录图片主键 UUID',
     `meal_record_id`       CHAR(36)         NOT NULL COMMENT '所属饮食记录 UUID',
     `original_object_key`  VARCHAR(512)     NOT NULL COMMENT '原始图片在对象存储中的文件键',
-    `processed_object_key` VARCHAR(512)     NULL COMMENT '缩略图在对象存储中的文件键，未生成时为空',
     `sort_order`           TINYINT UNSIGNED NOT NULL COMMENT '图片展示顺序，从 0 开始，单条记录最多 9 张，由应用层校验',
     `is_cover`             TINYINT(1)       NOT NULL DEFAULT 0 COMMENT '是否为当前记录封面：0 否，1 是，由应用层保证单封面',
     `created_at`           DATETIME(3)      NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
@@ -129,4 +127,4 @@ CREATE TABLE IF NOT EXISTS `meal_record_images`
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT = '饮食记录图片表，保存原图、缩略图、顺序和封面标记';
+    COMMENT = '饮食记录图片表，保存原图、顺序和封面标记';
