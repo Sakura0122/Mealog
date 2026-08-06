@@ -38,28 +38,34 @@ const emit = defineEmits<{
 
     <view class="mx-5 mt-6 overflow-hidden border border-[#e5e2df] rounded-3xl bg-white shadow-[0_8px_18px_rgba(0,0,0,0.06)]">
       <view class="min-h-[57px] flex items-center border-b border-[#ebe8e4] px-5 py-3">
-        <wd-icon name="book" size="18px" color="#5c6949" />
-        <text class="ml-4 min-w-0 flex-1 break-words text-base text-[#52634c] font-medium">
+        <view class="w-5 flex shrink-0 items-center justify-center">
+          <wd-icon name="book" size="18px" color="#5c6949" />
+        </view>
+        <text class="ml-3 min-w-0 flex-1 break-words text-base text-[#52634c] font-medium">
           {{ recipe.name }}
         </text>
       </view>
-      <view class="min-h-[52px] flex items-start border-b border-[#ebe8e4] px-5 py-3">
-        <wd-icon name="list" size="18px" color="#777a77" custom-class="mt-1" />
+      <view class="min-h-[48px] flex items-start border-b border-[#ebe8e4] px-5 py-2">
+        <view class="h-6 w-5 flex shrink-0 items-center justify-center">
+          <wd-icon name="list" size="18px" color="#777a77" />
+        </view>
         <view v-if="recipe.ingredients.length" class="ml-3 min-w-0 flex flex-1 flex-wrap gap-1">
-          <text v-for="(item, index) in recipe.ingredients" :key="`${index}-${item}`" class="max-w-full break-words rounded-full bg-[#e1e6c2] px-2 py-1 text-[10px] text-[#59624d]">
+          <text v-for="(item, index) in recipe.ingredients" :key="`${index}-${item}`" class="max-w-full break-words rounded-full bg-[#e1e6c2] px-2 py-1 text-xs text-[#59624d] leading-4">
             {{ item }}
           </text>
         </view>
-        <text v-else class="ml-3 text-sm text-[#a4a59f]">
+        <text v-else class="ml-3 text-sm text-[#a4a59f] leading-6">
           暂未填写食材
         </text>
       </view>
-      <view class="min-h-[112px] flex items-start px-5 py-4">
-        <wd-icon name="file" size="18px" color="#777a77" custom-class="mt-1" />
+      <view class="min-h-[88px] flex items-start px-5 py-3">
+        <view class="h-6 w-5 flex shrink-0 items-center justify-center">
+          <wd-icon name="file" size="18px" color="#777a77" />
+        </view>
         <text v-if="recipe.steps" class="ml-3 min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-[#4e5848] leading-6">
           {{ recipe.steps }}
         </text>
-        <text v-else class="ml-3 text-sm text-[#a4a59f]">
+        <text v-else class="ml-3 text-sm text-[#a4a59f] leading-6">
           暂未填写制作步骤
         </text>
       </view>

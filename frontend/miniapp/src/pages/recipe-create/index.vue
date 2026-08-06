@@ -16,7 +16,19 @@ const loading = ref(false)
 const loadError = ref('')
 
 const recipeName = ref('')
-const ingredients = ref('')
+const ingredientItems = ref<string[]>([])
+const ingredientDraft = ref('')
+const addIngredient = () => {
+  const ingredient = ingredientDraft.value.trim()
+  if (!ingredient)
+    return
+
+  ingredientItems.value.push(ingredient)
+  ingredientDraft.value = ''
+}
+const removeIngredient = (index: number) => {
+  ingredientItems.value.splice(index, 1)
+}
 const steps = ref('')
 
 const coverObjectKey = ref<string | null>(null)
@@ -28,7 +40,7 @@ const loadRecipe = async () => {
   try {
     const recipe = await recipeApi.detail(recipeId.value)
     recipeName.value = recipe.name
-    ingredients.value = recipe.ingredients.join('\n')
+    ingredientItems.value = [...recipe.ingredients]
     steps.value = recipe.steps ?? ''
     coverObjectKey.value = recipe.cover_object_key
     coverPreviewUrl.value = recipe.cover_url ?? ''
@@ -71,13 +83,18 @@ const removeCover = () => {
 
 const saving = ref(false)
 
-const buildPayload = (coverKey: string | null): RecipePayload => ({
-  name: recipeName.value.trim(),
-  cover_object_key: coverKey,
-  // 编辑框以换行表达食材顺序，提交时忽略用户输入的空白行。
-  ingredients: ingredients.value.split(/\r?\n/).map(item => item.trim()).filter(Boolean),
-  steps: steps.value.trim() || null,
-})
+const buildPayload = (coverKey: string | null): RecipePayload => {
+  const pendingIngredient = ingredientDraft.value.trim()
+  return {
+    name: recipeName.value.trim(),
+    cover_object_key: coverKey,
+    // 未按回车确认的最后一项也随表单提交，避免用户输入丢失。
+    ingredients: pendingIngredient
+      ? [...ingredientItems.value, pendingIngredient]
+      : [...ingredientItems.value],
+    steps: steps.value.trim() || null,
+  }
+}
 
 const saveRecipe = async () => {
   if (!recipeName.value.trim()) {
@@ -149,16 +166,33 @@ const saveRecipe = async () => {
 
       <view class="mx-5 mt-6 overflow-hidden border border-[#e5e2df] rounded-3xl bg-white shadow-[0_8px_18px_rgba(0,0,0,0.06)]">
         <view class="h-[57px] flex items-center border-b border-[#ebe8e4] px-5">
-          <wd-icon name="book" size="18px" color="#5c6949" />
-          <input v-model="recipeName" maxlength="100" class="ml-4 min-w-0 flex-1 text-base text-[#1c1c1a]" placeholder="菜名" placeholder-class="text-[#c7c7c1]">
+          <view class="w-5 flex shrink-0 items-center justify-center">
+            <wd-icon name="book" size="18px" color="#5c6949" />
+          </view>
+          <input v-model="recipeName" maxlength="100" class="ml-3 min-w-0 flex-1 text-base text-[#1c1c1a]" placeholder="菜名" placeholder-class="text-[#c7c7c1]">
         </view>
-        <view class="min-h-[96px] flex items-start border-b border-[#ebe8e4] px-5 py-4">
-          <wd-icon name="list" size="18px" color="#777a77" custom-class="mt-1" />
-          <textarea v-model="ingredients" class="ml-4 h-20 min-w-0 flex-1 text-base text-[#1c1c1a] leading-6" placeholder="每行输入一种食材" placeholder-class="text-[#c7c7c1]" />
+        <view class="min-h-[56px] flex items-center border-b border-[#ebe8e4] px-5 py-2">
+          <view class="h-6 w-5 flex shrink-0 items-center justify-center">
+            <wd-icon name="list" size="18px" color="#777a77" />
+          </view>
+          <view class="ml-3 min-w-0 flex flex-1 flex-wrap items-center gap-2">
+            <view v-for="(item, index) in ingredientItems" :key="`${index}-${item}`" class="h-8 max-w-full flex items-center rounded-full bg-[#e1e6c2] pl-3 pr-1 text-[#59624d]">
+              <text class="max-w-[180px] truncate text-sm">
+                {{ item }}
+              </text>
+              <button class="m-0 ml-1 h-6 w-6 flex shrink-0 items-center justify-center border-0 rounded-full bg-transparent p-0 after:border-0" aria-label="删除食材" @click="removeIngredient(index)">
+                <wd-icon name="close" size="12px" color="#737b66" />
+              </button>
+            </view>
+            <input v-model="ingredientDraft" confirm-hold confirm-type="done" class="h-8 min-w-[96px] flex-1 text-base text-[#1c1c1a]" placeholder="食材" placeholder-class="text-[#c7c7c1]" @confirm="addIngredient">
+          </view>
         </view>
-        <view class="min-h-[136px] flex items-start px-5 py-4">
-          <wd-icon name="file" size="18px" color="#777a77" custom-class="mt-1" />
-          <textarea v-model="steps" class="ml-4 h-28 min-w-0 flex-1 text-base text-[#1c1c1a] leading-6" placeholder="制作步骤" placeholder-class="text-[#c7c7c1]" />
+        <!-- 步骤保留紧凑的初始高度，并随多行内容自动增高。 -->
+        <view class="min-h-[96px] flex items-start px-5 py-3">
+          <view class="mt-1 h-6 w-5 flex shrink-0 items-center justify-center">
+            <wd-icon name="file" size="18px" color="#777a77" />
+          </view>
+          <textarea v-model="steps" auto-height class="ml-3 min-h-18 min-w-0 flex-1 text-base text-[#1c1c1a] leading-6" placeholder="制作步骤" placeholder-class="text-[#c7c7c1]" />
         </view>
       </view>
 

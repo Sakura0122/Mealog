@@ -117,6 +117,16 @@ const selectDate = (cell: CalendarCell) => {
 }
 
 const showSourcePicker = ref(false)
+const getDefaultEatenAt = () => {
+  const now = new Date()
+  if (selectedDate.value === formatDateParam(now))
+    return now.getTime()
+
+  const [year, month, day] = selectedDate.value.split('-').map(Number)
+  // 补记非当天饮食时默认使用正午，既保留所选日期，也避免沿用当前时刻造成误解。
+  return new Date(year, month - 1, day, 12).getTime()
+}
+
 const chooseRecordImage = (sourceType: 'camera' | 'album') => {
   skipNextHomeLoad.value = true
   uni.chooseImage({
@@ -135,7 +145,7 @@ const chooseRecordImage = (sourceType: 'camera' | 'album') => {
           // 临时路径不拼接到 URL，避免多图路径超过页面地址长度限制。
           eventChannel.emit('selectedRecordImages', {
             imagePaths,
-            takenAt: Date.now(),
+            takenAt: getDefaultEatenAt(),
           })
         },
       })
